@@ -1342,12 +1342,14 @@ class HTMLOUT
 						}
 						$cpy = $o->$f; // Don't change the objects themselves! Make copies!
 						if (array_key_exists('kilo', $a) && $a['kilo'])
-							$cpy /= 1000;
+							if (is_numeric($cpy))
+								$cpy /= 1000;
 							$cpy = (string) $cpy;
 						if (is_numeric($cpy) && !ctype_digit(($cpy[0] == '-') ? substr($cpy,1) : $cpy))
 							$cpy = sprintf("%1.2f", $cpy);
 						if (array_key_exists('suffix', $a) && $a['suffix'])
-							$cpy .= $a['suffix'];
+							if ($cpy != 'n/a')
+								$cpy .= $a['suffix'];
 						if (array_key_exists('color', $a) && $a['color'])
 							$cpy = "<font color='$a[color]'>".$cpy."</font>";
 						if (array_key_exists('href', $a) && $a['href']) {
