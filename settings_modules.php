@@ -7,13 +7,13 @@
 $settings['modules_enabled'] = array(
     'IndcPage'           => true,  # Inducements try-out
     'PDFroster'          => true,  # Team PDF roster
-    'RSSfeed'            => true,  # Site RSS feed
-    'SGraph'             => true,  # Graphical statistics
+    'RSSfeed'            => false,  # Site RSS feed
+    'SGraph'             => false,  # Graphical statistics
     'Memmatches'         => true,  # Memorable matches viewer
     'Wanted'             => true,  # Wanted list
     'HOF'                => true,  # Hall of fame
     'Prize'              => true,  # Tournament prizes list
-    'Registration'       => true,  # Allows users to register on the site.
+    'Registration'       => false,  # Allows users to register on the site.
     'Search'             => true,  # Search for coaches and teams.
     'TeamCompare'        => true,  # Team strength compare
     'Cemetery'           => true,  # Team cemetery page
@@ -36,8 +36,8 @@ $settings['modules_enabled'] = array(
 /*
     Registration
 */
-$settings['allow_registration'] = true; // Default is true.
-$settings['registration_webmaster'] = "webmaster@example.com"; // Default is "webmaster@example.com".
+$settings['allow_registration'] = false; // Default is true.
+$settings['registration_webmaster'] = "reddz@mts.net"; // Default is "webmaster@example.com".
 $settings['lang'] = 'en-GB'; // Default language for registred user.
 
 /*
