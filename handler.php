@@ -202,7 +202,8 @@ switch ($_GET['type'])
 		break;
 	/* TeamRebuy */
 	case 'teamrebuy':
-		Module::run('TeamRebuy', array());
+		$tid = isset($_GET['tid']) ? $_GET['tid'] : 0;
+		Module::run('TeamRebuy', array((int) $tid));
 		break;
 	default:
 		fatal("Sorry. I don't know what the type means.\n");

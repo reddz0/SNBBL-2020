@@ -36,10 +36,13 @@ public static function main($argv) # argv = argument vector (array).
 {
     #global $lng;
     #title($lng->getTrn('name', __CLASS__));
-	title('Team Rebuy');
-	$team = self::_teamSelect();
-    if (is_numeric($team)) {
-        self::_showteam($team);
+	$tid = array_shift($argv);
+    if (!is_numeric($tid) || $tid == 0) {
+		title('Team Rebuy');
+		$tid = self::_teamSelect();
+	}
+	if (is_numeric($tid) && $tid > 0) {
+		self::_showteam($tid);
 	}
     return true;
 }
@@ -56,7 +59,7 @@ protected static function _teamSelect()
     <br>
     <center>
     <form method='POST'>
-    <input type="text" id='team_as' name="team_as" size="30" maxlength="50" value="<?php echo $team;?>">
+    Select Team: <input type="text" id='team_as' name="team_as" size="30" maxlength="50" value="<?php echo $team;?>">
     <script>
         $(document).ready(function(){
             var options, a;
@@ -80,7 +83,7 @@ protected static function _teamSelect()
 protected static function _showteam($tid)
 {
 	$team_name = get_alt_col('teams', 'team_id', $tid, 'name');
-	echo '<p>' . $team_name . ' Team Rebuy</p>';
+	title($team_name . ' Team Rebuy');
 }
 
 /*
