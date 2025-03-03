@@ -200,6 +200,10 @@ switch ($_GET['type'])
 		break;
 	case 'scheduler_apa_schedule_available':
 		break;
+	/* TeamRebuy */
+	case 'teamrebuy':
+		Module::run('TeamRebuy', array());
+		break;
 	default:
 		fatal("Sorry. I don't know what the type means.\n");
 }

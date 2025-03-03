@@ -176,4 +176,10 @@ Module::register(array(
     'filesLoadTime' => array('famousteams/class_famousteams.php')
 ));
 
+Module::register(array(
+    'class'         => 'TeamRebuy',
+    'filesRunTime'  => array(),
+    'filesLoadTime' => array('teamrebuy/class_teamrebuy.php')
+));
+
 ?>

@@ -1066,6 +1066,8 @@ class HTMLOUT
 							echo '</ul></li>';
 						}
 					}
+					if (Module::isRegistered('TeamRebuy'))
+						echo '<li><a href="handler.php?type=teamrebuy">' . 'Team Rebuy' . '</a></li>';
 				?>
 			</ul>
 		</li><?php
