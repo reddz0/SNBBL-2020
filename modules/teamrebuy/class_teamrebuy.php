@@ -84,7 +84,204 @@ protected static function _showteam($tid)
 {
 	$team_name = get_alt_col('teams', 'team_id', $tid, 'name');
 	title($team_name . ' Team Rebuy');
+
+	$t = new Team($tid);
+	setupGlobalVars(T_SETUP_GLOBAL_VARS__LOAD_LEAGUE_SETTINGS, array('lid' => $t->f_lid)); // Load correct $rules for league.
+
+	/* Argument(s) passed to generating functions. */
+	$ALLOW_EDIT = $t->allowEdit(); # Show team action boxes?
+	$DETAILED   = true; #(isset($_GET['detailed']) && $_GET['detailed'] == 1);# Detailed roster view?
+
+	/* Team pages consist of the output of these generating functions. */
+	#$t->handleActions($ALLOW_EDIT); # Handles any actions/request sent.
+	list($players, $players_backup) = self::_loadPlayers($DETAILED, $t); # Should come after handleActions().
+	self::_roster($ALLOW_EDIT, $DETAILED, $t, $players);
+
 }
+
+	protected static function _loadPlayers($DETAILED, $t) {
+		/*
+			Lets prepare the players for the roster.
+		*/
+		global $settings;
+		$team = $t; // Copy. Used instead of $this for readability.
+		$players = $players_org = array();
+		$players_org = $team->getPlayers();
+		// Make two copies: We will be overwriting $players later when the roster has been printed, so that the team actions boxes have the correct untempered player data to work with.
+		foreach ($players_org as $p) {
+			array_push($players, clone $p);
+		}
+		// Filter players depending on settings and view mode.
+		$tmp_players = array();
+		foreach ($players as $p) {
+			if ($p->is_dead || $p->is_sold || $p->is_journeyman) {
+				continue;
+			}
+			array_push($tmp_players, $p);
+		}
+		$players = $tmp_players;
+		return array($players, $players_org);
+	}
+
+	protected static function _roster($ALLOW_EDIT, $DETAILED, $t, $players) {
+		global $rules, $settings, $lng, $skillididx, $coach, $DEA;
+		$team = $t; // Copy. Used instead of $this for readability.
+
+		/******************************
+		 *   Make the players ready for roster printing.
+		 ******************************/
+		foreach ($players as $p) {
+			/*
+				Misc
+			*/
+			$p->name = preg_replace('/\s/', '&nbsp;', $p->name);
+			$p->position = preg_replace('/\s/', '&nbsp;', $p->position);
+			$p->info = '<i class="icon-info"></i>';
+			$p->team_id = $team->team_id;
+			/*
+				Colors
+			*/
+			// Fictive player color fields used for creating player table.
+			$p->HTMLfcolor = '#000000';
+			$p->HTMLbcolor = COLOR_HTML_NORMAL;
+			if     ($p->is_sold && $DETAILED)   $p->HTMLbcolor = COLOR_HTML_SOLD; # Sold has highest priority.
+			elseif ($p->is_dead && $DETAILED)   $p->HTMLbcolor = COLOR_HTML_DEAD;
+			elseif ($p->is_mng)                 $p->HTMLbcolor = COLOR_HTML_MNG;
+			elseif ($p->is_retired)             $p->HTMLbcolor = COLOR_HTML_RETIRED;
+			elseif ($p->is_journeyman_used)     $p->HTMLbcolor = COLOR_HTML_JOURNEY_USED;
+			elseif ($p->is_journeyman)          $p->HTMLbcolor = COLOR_HTML_JOURNEY;
+			elseif ($p->mayHaveNewSkill())      $p->HTMLbcolor = COLOR_HTML_NEWSKILL;
+			elseif ($DETAILED)                  $p->HTMLbcolor = COLOR_HTML_READY;
+			$p->skills   = '<small>'.$p->getSkillsStr(true).'</small>';
+			$p->injs     = $p->getInjsStr(true);
+			$p->position = "<table style='border-spacing:0px;'><tr><td><img align='left' src='$p->icon' alt='player avatar'></td><td>".$lng->getTrn("position/".strtolower($lng->FilterPosition($p->position)))."</td></tr></table>";
+			if ($DETAILED) {
+				$p->mv_cas = "$p->mv_bh/$p->mv_si/$p->mv_ki";
+				$p->mv_spp = "$p->mv_spp/$p->extra_spp";
+			}
+			// Characteristic's colors
+			foreach (array('ma', 'ag', 'pa', 'av', 'st') as $chr) {
+				$sub = $p->$chr - $p->{"def_$chr"};
+				$defchr = $p->{"def_$chr"};
+				if  ($chr == 'ma' || $chr == 'av' || $chr == 'st' ) {
+					if ($sub == 0) {
+						// Nothing!
+					}
+					elseif ($sub == 1)  $p->{"${chr}_color"} = COLOR_HTML_CHR_EQP1;
+					elseif ($sub > 1)   $p->{"${chr}_color"} = COLOR_HTML_CHR_GTP1;
+					elseif ($sub == -1) $p->{"${chr}_color"} = COLOR_HTML_CHR_EQM1;
+					elseif ($sub < -1)  $p->{"${chr}_color"} = COLOR_HTML_CHR_LTM1;
+					if ($p->$chr != $p->{"${chr}_ua"}) {
+						$p->{"${chr}_color"} = COLOR_HTML_CHR_BROKENLIMIT;
+						$p->$chr = $p->{$chr.'_ua'}.' <i>('.$p->$chr.' eff.)</i>';
+					}
+				}
+				else {
+					if ($defchr > 0) {
+						if ($sub == 0) {
+							// Nothing!
+						}
+						elseif ($sub == 1)  $p->{"${chr}_color"} = COLOR_HTML_CHR_EQM1;
+						elseif ($sub > 1)   $p->{"${chr}_color"} = COLOR_HTML_CHR_LTM1;
+						elseif ($sub == -1) $p->{"${chr}_color"} = COLOR_HTML_CHR_EQP1;
+						elseif ($sub < -1)  $p->{"${chr}_color"} = COLOR_HTML_CHR_GTP1;
+						if ($p->$chr != $p->{"${chr}_ua"}) {
+							$p->{"${chr}_color"} = COLOR_HTML_CHR_BROKENLIMIT;
+							$p->$chr = $p->{$chr.'_ua'}.' <i>('.$p->$chr.' eff.)</i>';
+						}	
+					}
+					else {
+						if ($sub == 0) {
+							// Nothing!
+						}
+						elseif ($sub == 7)  $p->{"${chr}_color"} = COLOR_HTML_CHR_EQM1;
+						elseif ($sub > 7)   $p->{"${chr}_color"} = COLOR_HTML_CHR_LTM1;
+						elseif ($sub == 6) $p->{"${chr}_color"} = COLOR_HTML_CHR_EQP1;
+						elseif ($sub < 6)  $p->{"${chr}_color"} = COLOR_HTML_CHR_GTP1;
+						if ($p->$chr != $p->{"${chr}_ua"}) {
+							$p->{"${chr}_color"} = COLOR_HTML_CHR_BROKENLIMIT;
+							$p->$chr = $p->{$chr.'_ua'}.' <i>(5 eff.)</i>';
+						}	
+					}
+				}
+			}
+			if ($p->pa == 0 || $p->pa >6) {       
+				$p->pa = '-';
+			}
+			else {       
+				$p->pa = $p->pa.'+';
+			}
+			$p->seasons = $p->getSeasons();
+			if     ($p->is_sold)   				$p->rebuy = 'n/a';
+			elseif ($p->is_dead)   				$p->rebuy = 'n/a';
+			elseif ($p->is_journeyman_used)     $p->rebuy = 'n/a';
+			elseif ($p->is_journeyman)          $p->rebuy = 'n/a';
+			else								$p->rebuy = $p->getRebuy();
+		}
+
+		/******************************
+		 * Team players table
+		 * ------------------
+		 * Contains player information and menu(s) for skill choice.
+		 ******************************/
+		$allowEdit = (isset($coach) && $coach)
+			? $coach->isMyTeam($team->team_id) || $coach->mayManageObj(T_OBJ_TEAM, $team->team_id)
+			: false;
+		$fields = array(
+			'nr'        => array('desc' => '#', 'editable' => 'updatePlayerNumber', 'javaScriptArgs' => array('team_id', 'player_id'), 'editableClass' => 'number', 'allowEdit' => $allowEdit),
+			'name'      => array('desc' => $lng->getTrn('common/name'), 'editable' => 'updatePlayerName', 'javaScriptArgs' => array('team_id', 'player_id'), 'allowEdit' => $allowEdit),
+			'info'      => array('desc' => '', 'nosort' => true, 'icon' => true, 'href' => array('link' => urlcompile(T_URL_PROFILE,T_OBJ_PLAYER,false,false,false), 'field' => 'obj_id', 'value' => 'player_id')),
+			'position'  => array('desc' => $lng->getTrn('common/pos'), 'nosort' => true),
+			'skills'    => array('desc' => $lng->getTrn('common/skills'), 'nosort' => true),
+			'injs'      => array('desc' => $lng->getTrn('common/injs'), 'nosort' => true),
+			'mv_spp'    => array('desc' => ($DETAILED) ? 'SPP/extra' : 'SPP', 'nosort' => ($DETAILED) ? true : false),
+			'value'     => array('desc' => $lng->getTrn('common/value'), 'kilo' => true, 'suffix' => 'k'),
+		);
+		$fieldsDetailed = array(
+			'nr'        => array('desc' => '#', 'editable' => 'updatePlayerNumber', 'javaScriptArgs' => array('team_id', 'player_id'), 'editableClass' => 'number', 'allowEdit' => $allowEdit),
+			'name'      => array('desc' => $lng->getTrn('common/name'), 'editable' => 'updatePlayerName', 'javaScriptArgs' => array('team_id', 'player_id'), 'allowEdit' => $allowEdit),
+			'info'      => array('desc' => '', 'nosort' => true, 'icon' => true, 'href' => array('link' => urlcompile(T_URL_PROFILE,T_OBJ_PLAYER,false,false,false), 'field' => 'obj_id', 'value' => 'player_id')),
+			'position'  => array('desc' => $lng->getTrn('common/pos'), 'nosort' => true),
+			'skills'    => array('desc' => $lng->getTrn('common/skills'), 'nosort' => true),
+			'injs'      => array('desc' => $lng->getTrn('common/injs'), 'nosort' => true),
+			'mv_spp'    => array('desc' => ($DETAILED) ? 'SPP/extra' : 'SPP', 'nosort' => ($DETAILED) ? true : false),
+			'value'     => array('desc' => $lng->getTrn('common/value'), 'kilo' => true, 'suffix' => 'k'),
+			'seasons'	=> array('desc' => 'Seasons', 'nosort' => true),
+			'rebuy'		=> array('desc' => 'Rebuy', 'kilo' => true, 'suffix' => 'k', 'nosort' => true),
+		);
+		HTMLOUT::sort_table(
+			$team->name.' roster',
+			urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$team->team_id,false,false).(($DETAILED) ? '&amp;detailed=1' : '&amp;detailed=0'),
+			$players,
+			($DETAILED) ? $fieldsDetailed : $fields,
+			($DETAILED) ? array('+is_dead', '+is_sold', '+is_mng', '+is_retired', '+is_journeyman', '+nr', '+name') : sort_rule('player'),
+			(isset($_GET['sort'])) ? array((($_GET['dir'] == 'a') ? '+' : '-') . $_GET['sort']) : array(),
+			array('color' => ($DETAILED) ? true : false, 'doNr' => false, 'noHelp' => true)
+		);
+		?>
+		<!-- Following HTML is from class_team_htmlout.php _roster -->
+		<table class="text">
+			<tr>
+				<td style="width: 100%;"> </td>
+				<?php
+				if ($DETAILED) {
+					?>
+					<td style="background-color: <?php echo COLOR_HTML_READY;   ?>;"><font color='black'><b>&nbsp;Ready&nbsp;</b></font></td>
+					<td style="background-color: <?php echo COLOR_HTML_MNG;     ?>;"><font color='black'><b>&nbsp;MNG&nbsp;</b></font></td>
+					<td style="background-color: <?php echo COLOR_HTML_RETIRED;     ?>;"><font color='black'><b>&nbsp;Retired&nbsp;</b></font></td>
+					<td style="background-color: <?php echo COLOR_HTML_JOURNEY; ?>;"><font color='black'><b>&nbsp;Journey&nbsp;</b></font></td>
+					<td style="background-color: <?php echo COLOR_HTML_JOURNEY_USED; ?>;"><font color='black'><b>&nbsp;Used&nbsp;journey&nbsp;</b></font></td>
+					<td style="background-color: <?php echo COLOR_HTML_DEAD;    ?>;"><font color='black'><b>&nbsp;Dead&nbsp;</b></font></td>
+					<td style="background-color: <?php echo COLOR_HTML_SOLD;    ?>;"><font color='black'><b>&nbsp;Sold&nbsp;</b></font></td>
+					<td style="background-color: <?php echo COLOR_HTML_STARMERC;?>;"><font color='black'><b>&nbsp;Star/merc&nbsp;</b></font></td>
+					<td style="background-color: <?php echo COLOR_HTML_NEWSKILL;?>;"><font color='black'><b>&nbsp;New&nbsp;skill&nbsp;</b></font></td>
+					<?php
+				}
+				?>
+			</tr>
+		</table>
+		<?php
+	}
 
 /*
  *  This function returns information about the module and its author.
@@ -118,30 +315,6 @@ public static function triggerHandler($type, $argv){
 
     // Do stuff on trigger events.
     // $type may be any one of the T_TRIGGER_* types.
-}
-
-/***************
- * OPTIONAL subdivision of module code into class methods.
- * 
- * These work as in ordinary classes with the exception that you really should (but are strictly required to) only interact with the class through static methods.
- ***************/
-
-private $attribute = 'Default value';
-
-public function __construct($arg1)
-{
-    $this->attribute = $arg1;
-}
-
-public function myMethod()
-{
-    return $this->attribute;
-}
-
-public static function myStaticMethod($arg)
-{
-    $obj = new self('New value');
-    echo $obj->myMethod();
 }
 
 }
