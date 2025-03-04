@@ -117,11 +117,96 @@ protected static function _showteam($tid)
 		if ($m_error !== '')
 			echo '<li>' . $m_error . '</li>';
 		echo '</ul><p><a href="'.urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$t->team_id,false,false).'">Go to Team Page to resolve.</a></p>';
-		return false;
+		#return false;
 	}
+	self::_teamgoods($ALLOW_EDIT, $t);
 	self::_roster($ALLOW_EDIT, $DETAILED, $t, $players);
 	return true;
 }
+
+	protected static function _teamgoods($ALLOW_EDIT, $t) {
+		global $settings, $lng, $coach, $DEA, $racesNoApothecary;
+		$team = $t; // Copy. Used instead of $this for readability.
+		$race = new Race($t->f_race_id);
+		$rr_price = $DEA[$race->race]['other']['rr_cost'];
+		$apoth = !in_array($race->race_id, $racesNoApothecary);
+
+		?>
+		<table class="common" style="width:50%">
+			<tr class="commonhead">
+				<td colspan="3"><b>
+				<?php echo $t->name;?> Treasury
+				</b></td>
+			</tr>
+			<tr>
+				<td><i>Item</i></td>
+				<td><i>Current Amount</i></td>
+				<td><i>Rebuy Amount</i></td>
+			</tr>
+			<tr>
+				<td style="background-color:#FFFFFF;color:#000000;"><b>Treasury</b></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->treasury / 1000; ?>k</td>
+				<td style="background-color:#FFFFFF;color:#000000;">Delta</td>
+			</tr>
+		</table>
+		<p>&nbsp;</p>
+		<table class="common" style="width:50%">
+			<tr class="commonhead">
+				<td colspan="6"><b>
+				<?php echo $t->name;?> Team Goods
+				</b></td>
+			</tr>
+			<tr>
+				<td><i>Item</i></td>
+				<td><i>Cost Per</i></td>
+				<td><i>Current Amount</i></td>
+				<td><i>Current Value</i></td>
+				<td><i>Rebuy Amount</i></td>
+				<td><i>Rebuy Value</i></td>
+			</tr>
+		<?php
+		if ($apoth) {
+		?>
+			<tr>
+				<td style="background-color:#FFFFFF;color:#000000;"><b>Apothecary</b></td>
+				<td style="background-color:#FFFFFF;color:#000000;">50k</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->apothecary; ?></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->apothecary * 50; ?>k</td>
+				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Amount</td>
+				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Value</td>
+			</tr>
+		<?php
+		}
+		?>
+			<tr>
+				<td style="background-color:#FFFFFF;color:#000000;"><b>Re-rolls</b></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $rr_price / 1000; ?>k</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->rerolls; ?></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->rerolls * $rr_price / 1000; ?>k</td>
+				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Amount</td>
+				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Value</td>
+			</tr>
+			<tr>
+				<td style="background-color:#FFFFFF;color:#000000;"><b>Assistant Coaches</b></td>
+				<td style="background-color:#FFFFFF;color:#000000;">10k</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->ass_coaches; ?></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->ass_coaches * 10; ?>k</td>
+				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Amount</td>
+				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Value</td>
+			</tr>
+			<tr>
+				<td style="background-color:#FFFFFF;color:#000000;"><b>Cheerleaders</b></td>
+				<td style="background-color:#FFFFFF;color:#000000;">10k</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->cheerleaders; ?></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->cheerleaders * 10; ?>k</td>
+				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Amount</td>
+				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Value</td>
+			</tr>
+		</table>
+		<p>&nbsp;</p>
+		<?php
+		
+	}
 
 	protected static function _loadPlayers($DETAILED, $t) {
 		/*
@@ -246,6 +331,9 @@ protected static function _showteam($tid)
 			elseif ($p->is_journeyman_used)     $p->rebuy = 'n/a';
 			elseif ($p->is_journeyman)          $p->rebuy = 'n/a';
 			else								$p->rebuy = $p->getRebuy();
+			if ($p->inj_ni > 0)
+				$p->heal_ni = "<input type='checkbox' id='heal_ni_".$p->player_id."' name='heal_ni_".$p->player_id."' />";
+			$p->rebuy_action = "<select id='rebuy_action_".$p->player_id."' id='rebuy_action_".$p->player_id."'><option>Release</option><option>Rebuy</option></select>";
 		}
 
 		/******************************
@@ -257,34 +345,38 @@ protected static function _showteam($tid)
 			? $coach->isMyTeam($team->team_id) || $coach->mayManageObj(T_OBJ_TEAM, $team->team_id)
 			: false;
 		$fields = array(
-			'nr'        => array('desc' => '#', 'editable' => 'updatePlayerNumber', 'javaScriptArgs' => array('team_id', 'player_id'), 'editableClass' => 'number', 'allowEdit' => $allowEdit),
-			'name'      => array('desc' => $lng->getTrn('common/name'), 'editable' => 'updatePlayerName', 'javaScriptArgs' => array('team_id', 'player_id'), 'allowEdit' => $allowEdit),
+			'nr'        => array('desc' => '#', 'nosort' => true),
+			'name'      => array('desc' => $lng->getTrn('common/name'), 'nosort' => true),
 			'info'      => array('desc' => '', 'nosort' => true, 'icon' => true, 'href' => array('link' => urlcompile(T_URL_PROFILE,T_OBJ_PLAYER,false,false,false), 'field' => 'obj_id', 'value' => 'player_id')),
 			'position'  => array('desc' => $lng->getTrn('common/pos'), 'nosort' => true),
 			'skills'    => array('desc' => $lng->getTrn('common/skills'), 'nosort' => true),
 			'injs'      => array('desc' => $lng->getTrn('common/injs'), 'nosort' => true),
 			'mv_spp'    => array('desc' => ($DETAILED) ? 'SPP/extra' : 'SPP', 'nosort' => ($DETAILED) ? true : false),
-			'value'     => array('desc' => $lng->getTrn('common/value'), 'kilo' => true, 'suffix' => 'k'),
+			'value'     => array('desc' => $lng->getTrn('common/value'), 'kilo' => true, 'suffix' => 'k', 'nosort' => true),
+			'heal_ni'	=> array('desc' => 'Heal Ni', 'nosort' => true),
+			'rebuy_action'	=> array('desc' => $lng->getTrn('common/select'), 'nosort' => true),
 		);
 		$fieldsDetailed = array(
-			'nr'        => array('desc' => '#', 'editable' => 'updatePlayerNumber', 'javaScriptArgs' => array('team_id', 'player_id'), 'editableClass' => 'number', 'allowEdit' => $allowEdit),
-			'name'      => array('desc' => $lng->getTrn('common/name'), 'editable' => 'updatePlayerName', 'javaScriptArgs' => array('team_id', 'player_id'), 'allowEdit' => $allowEdit),
+			'nr'        => array('desc' => '#', 'nosort' => true),
+			'name'      => array('desc' => $lng->getTrn('common/name'), 'nosort' => true),
 			'info'      => array('desc' => '', 'nosort' => true, 'icon' => true, 'href' => array('link' => urlcompile(T_URL_PROFILE,T_OBJ_PLAYER,false,false,false), 'field' => 'obj_id', 'value' => 'player_id')),
 			'position'  => array('desc' => $lng->getTrn('common/pos'), 'nosort' => true),
 			'skills'    => array('desc' => $lng->getTrn('common/skills'), 'nosort' => true),
 			'injs'      => array('desc' => $lng->getTrn('common/injs'), 'nosort' => true),
 			'mv_spp'    => array('desc' => ($DETAILED) ? 'SPP/extra' : 'SPP', 'nosort' => ($DETAILED) ? true : false),
-			'value'     => array('desc' => $lng->getTrn('common/value'), 'kilo' => true, 'suffix' => 'k'),
+			'value'     => array('desc' => $lng->getTrn('common/value'), 'kilo' => true, 'suffix' => 'k', 'nosort' => true),
 			'seasons'	=> array('desc' => 'Seasons', 'nosort' => true),
 			'rebuy'		=> array('desc' => 'Rebuy', 'kilo' => true, 'suffix' => 'k', 'nosort' => true),
+			'heal_ni'	=> array('desc' => 'Heal Ni', 'nosort' => true),
+			'rebuy_action'	=> array('desc' => $lng->getTrn('common/select'), 'nosort' => true),
 		);
 		HTMLOUT::sort_table(
-			$team->name.' roster',
+			$team->name.' Roster',
 			urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$team->team_id,false,false).(($DETAILED) ? '&amp;detailed=1' : '&amp;detailed=0'),
 			$players,
 			($DETAILED) ? $fieldsDetailed : $fields,
-			($DETAILED) ? array('+is_dead', '+is_sold', '+is_mng', '+is_retired', '+is_journeyman', '+nr', '+name') : sort_rule('player'),
-			(isset($_GET['sort'])) ? array((($_GET['dir'] == 'a') ? '+' : '-') . $_GET['sort']) : array(),
+			sort_rule('player'),
+			array(),
 			array('color' => ($DETAILED) ? true : false, 'doNr' => false, 'noHelp' => true)
 		);
 		?>
