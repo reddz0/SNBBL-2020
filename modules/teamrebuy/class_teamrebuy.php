@@ -119,8 +119,11 @@ protected static function _showteam($tid)
 		echo '</ul><p><a href="'.urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$t->team_id,false,false).'">Go to Team Page to resolve.</a></p>';
 		#return false;
 	}
+	
+	echo "<form name='rebuy_form'>";
 	self::_teamgoods($ALLOW_EDIT, $t);
 	self::_roster($ALLOW_EDIT, $DETAILED, $t, $players);
+	echo "</form>";
 	return true;
 }
 
@@ -132,6 +135,32 @@ protected static function _showteam($tid)
 		$apoth = !in_array($race->race_id, $racesNoApothecary);
 
 		?>
+		<script type="text/javascript">
+			function updateTreasury() {
+				var treasury = <?php echo $t->treasury / 1000; ?> + 1000;
+				treasury += document.getElementById('num_gp').value * 20;
+				treasury += document.getElementById('num_gw').value * 20;
+				treasury += document.getElementById('num_gd').value * 10;
+				document.getElementById('rebuy_delta').value = treasury;
+			}
+			function rebuyApo() {
+				if (document.getElementById('rebuy_apo').checked) { document.getElementById('apo_price').value = 50; }
+				else { document.getElementById('apo_price').value = 0; }
+			}
+			function rebuyRR() {
+				document.getElementById('rr_price').value = document.getElementById('rebuy_rr').value * <?php echo $rr_price / 1000; ?>;
+			}
+			function rebuyAC() {
+				document.getElementById('ac_price').value = document.getElementById('rebuy_ac').value * 10;
+			}
+			function rebuyCL() {
+				document.getElementById('cl_price').value = document.getElementById('rebuy_cl').value * 10;
+			}
+		</script>
+		<p><b>Games Played:</b> <input type="text" onchange="numError(this);updateTreasury();" size="1" maxlength="2" name="num_gp" value="0" id="num_gp" /></p>
+		<p><b>Games Won:</b> <input type="text" onchange="numError(this);updateTreasury();" size="1" maxlength="2" name="num_gw" value="0" id="num_gw" /></p>
+		<p><b>Games Drawn:</b> <input type="text" onchange="numError(this);updateTreasury();" size="1" maxlength="2" name="num_gd" value="0" id="num_gd" /></p>
+
 		<table class="common" style="width:50%">
 			<tr class="commonhead">
 				<td colspan="3"><b>
@@ -146,7 +175,7 @@ protected static function _showteam($tid)
 			<tr>
 				<td style="background-color:#FFFFFF;color:#000000;"><b>Treasury</b></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->treasury / 1000; ?>k</td>
-				<td style="background-color:#FFFFFF;color:#000000;">Delta</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" onchange="numError(this);" size="5" maxlength="10" value="0" name="rebuy_delta" id="rebuy_delta" />k</td>
 			</tr>
 		</table>
 		<p>&nbsp;</p>
@@ -161,8 +190,8 @@ protected static function _showteam($tid)
 				<td><i>Cost Per</i></td>
 				<td><i>Current Amount</i></td>
 				<td><i>Current Value</i></td>
-				<td><i>Rebuy Amount</i></td>
-				<td><i>Rebuy Value</i></td>
+				<td><i>Rebuy</i></td>
+				<td><i>Cost</i></td>
 			</tr>
 		<?php
 		if ($apoth) {
@@ -172,8 +201,8 @@ protected static function _showteam($tid)
 				<td style="background-color:#FFFFFF;color:#000000;">50k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->apothecary; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->apothecary * 50; ?>k</td>
-				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Amount</td>
-				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Value</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="checkbox" name="rebuy_apo" id="rebuy_apo" onchange="rebuyApo();" /></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="3" maxlength="3" value="0" name="apo_price" id="apo_price" />k</td>
 			</tr>
 		<?php
 		}
@@ -183,24 +212,24 @@ protected static function _showteam($tid)
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $rr_price / 1000; ?>k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->rerolls; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->rerolls * $rr_price / 1000; ?>k</td>
-				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Amount</td>
-				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Value</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="2" maxlength="2" onchange="numError(this);rebuyRR();" value="0" name="rebuy_rr" id="rebuy_rr" /></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="3" maxlength="3" value="0" name="rr_price" id="rr_price" />k</td>
 			</tr>
 			<tr>
 				<td style="background-color:#FFFFFF;color:#000000;"><b>Assistant Coaches</b></td>
 				<td style="background-color:#FFFFFF;color:#000000;">10k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->ass_coaches; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->ass_coaches * 10; ?>k</td>
-				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Amount</td>
-				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Value</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="2" maxlength="2" onchange="numError(this);rebuyAC();" value="0" name="rebuy_ac" id="rebuy_ac" /></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="3" maxlength="3" value="0" name="ac_price" id="ac_price" />k</td>
 			</tr>
 			<tr>
 				<td style="background-color:#FFFFFF;color:#000000;"><b>Cheerleaders</b></td>
 				<td style="background-color:#FFFFFF;color:#000000;">10k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->cheerleaders; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->cheerleaders * 10; ?>k</td>
-				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Amount</td>
-				<td style="background-color:#FFFFFF;color:#000000;">Rebuy Value</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="2" maxlength="2" onchange="numError(this);rebuyCL();" value="0" name="rebuy_cl" id="rebuy_cl" /></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="3" maxlength="3" value="0" name="cl_price" id="cl_price" />k</td>
 			</tr>
 		</table>
 		<p>&nbsp;</p>
