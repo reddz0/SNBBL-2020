@@ -34,7 +34,13 @@ class TeamRebuy implements ModuleInterface
  */
 public static function main($argv) # argv = argument vector (array).
 {
-    #global $lng;
+    global $lng, $coach;
+	$IS_LOCAL_OR_GLOBAL_ADMIN = (isset($coach) && ($coach->ring == Coach::T_RING_GLOBAL_ADMIN || $coach->ring == Coach::T_RING_LOCAL_ADMIN));
+
+	if (!$IS_LOCAL_OR_GLOBAL_ADMIN) {
+		fatal("Sorry. Your access level does not allow you opening the requested page.");
+	}
+	
     #title($lng->getTrn('name', __CLASS__));
 	$tid = array_shift($argv);
     if (!is_numeric($tid) || $tid == 0) {
@@ -82,10 +88,16 @@ protected static function _teamSelect()
 
 protected static function _showteam($tid)
 {
-	$team_name = get_alt_col('teams', 'team_id', $tid, 'name');
-	title($team_name . ' Team Rebuy');
-
+	global $coach;
+	
 	$t = new Team($tid);
+
+	if (!$coach->isNodeCommish(T_NODE_LEAGUE, $t->f_lid)) {
+		fatal("Sorry. Your access level does not allow you opening the requested page.");
+	}
+
+	title($t->name . ' Team Rebuy');
+
 	setupGlobalVars(T_SETUP_GLOBAL_VARS__LOAD_LEAGUE_SETTINGS, array('lid' => $t->f_lid)); // Load correct $rules for league.
 
 	/* Argument(s) passed to generating functions. */
@@ -93,10 +105,22 @@ protected static function _showteam($tid)
 	$DETAILED   = true; #(isset($_GET['detailed']) && $_GET['detailed'] == 1);# Detailed roster view?
 
 	/* Team pages consist of the output of these generating functions. */
-	#$t->handleActions($ALLOW_EDIT); # Handles any actions/request sent.
-	list($players, $players_backup) = self::_loadPlayers($DETAILED, $t); # Should come after handleActions().
+	$m_error = '';
+	list($matches, $pages) = Stats::getMatches(T_OBJ_TEAM, $t->team_id, false, false, false, false, array(), true, true);
+	if (is_array($matches))
+		$m_error = 'This team has ' . count($matches) . ' unplayed scheduled matches. Are you sure they are ready to ReBuy?';
+	list($players, $players_backup, $jm_error) = self::_loadPlayers($DETAILED, $t); # Should come after handleActions().
+	if ($jm_error !== '' || $m_error !== '') {
+		echo '<p><strong>ERRORS FOUND</strong></p><ul>';
+		if ($jm_error !== '')
+			echo '<li>' . $jm_error . '</li>';
+		if ($m_error !== '')
+			echo '<li>' . $m_error . '</li>';
+		echo '</ul><p><a href="'.urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$t->team_id,false,false).'">Go to Team Page to resolve.</a></p>';
+		return false;
+	}
 	self::_roster($ALLOW_EDIT, $DETAILED, $t, $players);
-
+	return true;
 }
 
 	protected static function _loadPlayers($DETAILED, $t) {
@@ -104,6 +128,7 @@ protected static function _showteam($tid)
 			Lets prepare the players for the roster.
 		*/
 		global $settings;
+		$error = '';
 		$team = $t; // Copy. Used instead of $this for readability.
 		$players = $players_org = array();
 		$players_org = $team->getPlayers();
@@ -114,13 +139,17 @@ protected static function _showteam($tid)
 		// Filter players depending on settings and view mode.
 		$tmp_players = array();
 		foreach ($players as $p) {
-			if ($p->is_dead || $p->is_sold || $p->is_journeyman) {
+			if ($p->is_dead || $p->is_sold) {
+				continue;
+			}
+			if ($p->is_journeyman) {
+				$error = 'There is one or more journeymen on the roster that need to be removed first.';
 				continue;
 			}
 			array_push($tmp_players, $p);
 		}
 		$players = $tmp_players;
-		return array($players, $players_org);
+		return array($players, $players_org, $error);
 	}
 
 	protected static function _roster($ALLOW_EDIT, $DETAILED, $t, $players) {
