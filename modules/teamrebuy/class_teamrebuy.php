@@ -137,7 +137,7 @@ protected static function _showteam($tid)
 	/* Team pages consist of the output of these generating functions. */
 	$m_error = '';
 	list($matches, $pages) = Stats::getMatches(T_OBJ_TEAM, $t->team_id, false, false, false, false, array(), true, true);
-	if (is_array($matches))
+	if (is_array($matches) && count($matches) > 0)
 		$m_error = 'This team has ' . count($matches) . ' unplayed scheduled matches. Are you sure they are ready to ReBuy?';
 	list($players, $players_backup, $jm_error) = self::_loadPlayers($DETAILED, $t); # Should come after handleActions().
 	if ($jm_error !== '' || $m_error !== '') {
@@ -242,10 +242,25 @@ protected static function _showteam($tid)
 				updateTreasury();
 			}
 		</script>
-		<p><b>Games Played:</b> <input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gp" value="0" id="num_gp" /></p>
-		<p><b>Games Won:</b> <input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gw" value="0" id="num_gw" /></p>
-		<p><b>Games Drawn:</b> <input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gd" value="0" id="num_gd" /></p>
 
+		<table class="common" style="width:50%">
+			<tr class="commonhead">
+				<td colspan="3"><b>
+				<?php echo $t->name;?> Season Record
+				</b></td>
+			</tr>
+			<tr>
+				<td><i>Games Played</i></td>
+				<td><i>Games Won</i></td>
+				<td><i>Games Drawn</i></td>
+			</tr>
+			<tr>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gp" value="0" id="num_gp" /></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gw" value="0" id="num_gw" /></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gd" value="0" id="num_gd" /></td>
+			</tr>
+		</table>
+		<p>&nbsp;</p>
 		<table class="common" style="width:50%">
 			<tr class="commonhead">
 				<td colspan="5"><b>
