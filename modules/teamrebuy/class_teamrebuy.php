@@ -56,6 +56,11 @@ public static function main($argv) # argv = argument vector (array).
 	if (is_numeric($tid) && $tid > 0) {
 		self::_showteam($tid);
 	}
+	if (isset($_POST['COMMIT_REBUY']) && isset($_POST['tid'])) {
+		if ($_POST['COMMIT_REBUY'] == 'COMMIT REBUY' && is_numeric($_POST['tid'])) {
+			self::_doRebuy($_POST['tid']);
+		}
+	}
     return true;
 }
 
@@ -150,7 +155,7 @@ protected static function _showteam($tid)
 		return false;
 	}
 	
-	echo "<form name='rebuy_form'>";
+	echo "<form method='POST' name='rebuy_form'>";
 	self::_teamgoods($ALLOW_EDIT, $t, $players);
 	self::_roster($ALLOW_EDIT, $DETAILED, $t, $players);
 	echo "</form>";
@@ -190,6 +195,10 @@ protected static function _showteam($tid)
 				?>
 				document.getElementById('treasury_new_viz').innerText = treasury;
 				document.getElementById('treasury_new').value = treasury;
+				if (treasury < 0) {
+					document.getElementById('COMMIT_REBUY').disabled = true;
+					alert("Remaining Treasury is NEGATIVE!");
+				} else { document.getElementById('COMMIT_REBUY').disabled = false; }
 			}
 			function rebuyApo() {
 				if (document.getElementById('rebuy_apo').checked) {
@@ -243,6 +252,7 @@ protected static function _showteam($tid)
 			}
 		</script>
 
+		<input type="hidden" name="tid" id="tid" value="<?php echo $t->team_id; ?>" />
 		<table class="common" style="width:50%">
 			<tr class="commonhead">
 				<td colspan="3"><b>
@@ -296,6 +306,14 @@ protected static function _showteam($tid)
 				<td><i>Current Value</i></td>
 				<td><i>Rebuy</i></td>
 				<td><i>Cost</i></td>
+			</tr>
+			<tr>
+				<td style="background-color:#FFFFFF;color:#000000;"><b>Dedicated Fans</b></td>
+				<td style="background-color:#FFFFFF;color:#000000;">-</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->ff_bought; ?></td>
+				<td style="background-color:#FFFFFF;color:#000000;">-</td>
+				<td style="background-color:#FFFFFF;color:#000000;">-</td>
+				<td style="background-color:#FFFFFF;color:#000000;">-</td>
 			</tr>
 		<?php
 		if ($apoth) {
@@ -525,7 +543,16 @@ protected static function _showteam($tid)
 				?>
 			</tr>
 		</table>
+		<p>&nbsp;</p>
+		<center>
+		<p><b>REMEMBER: this action CANNOT be undone!</b></p>
+		<input type="submit" name="COMMIT_REBUY" id="COMMIT_REBUY" value="COMMIT REBUY" />
+		</center>
 		<?php
+	}
+
+	protected static function _doRebuy($tid) {
+		title("REBUYING " . $tid);
 	}
 
 /*
