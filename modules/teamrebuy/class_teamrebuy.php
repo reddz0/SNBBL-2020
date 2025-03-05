@@ -34,11 +34,17 @@ class TeamRebuy implements ModuleInterface
  */
 public static function main($argv) # argv = argument vector (array).
 {
-    global $lng, $coach;
+    global $rules, $lng, $coach;
 	$IS_LOCAL_OR_GLOBAL_ADMIN = (isset($coach) && ($coach->ring == Coach::T_RING_GLOBAL_ADMIN || $coach->ring == Coach::T_RING_LOCAL_ADMIN));
 
 	if (!$IS_LOCAL_OR_GLOBAL_ADMIN) {
 		fatal("Sorry. Your access level does not allow you opening the requested page.");
+	}
+	if (!isset($rules['max_rebuy'])) {
+		fatal("Missing rules['max_rebuy'] value in global/league settings file.");
+	}
+	elseif ($rules['max_rebuy'] == 0 || $rules['max_rebuy'] < -1) {
+		fatal("Incorrect value for rules['max_rebuy'] in global/league settings file.");
 	}
 	
     #title($lng->getTrn('name', __CLASS__));
@@ -55,7 +61,7 @@ public static function main($argv) # argv = argument vector (array).
 
 protected static function _teamSelect() 
 {
-    global $lng;
+    global $rules, $lng;
     $_SUBMITTED = isset($_POST['team_as']) && $_POST['team_as'];
     $team = '';
     if ($_SUBMITTED) {
@@ -64,6 +70,30 @@ protected static function _teamSelect()
     ?>
     <br>
     <center>
+	<table class="common" style="width:50%">
+		<tr>
+			<td style="background-color:#FFFFFF;color:#000000;padding-left:15px;padding-right:15px;">
+				<p>What this page WILL do:</p>
+				<ul>
+					<li>Calculate the rebuy funds.</li>
+					<li>Allow rebuy and purchase of additional team goods. Including Rerolls at initial cost.</li>
+					<li>Remove all MNG (miss next game) statuses.</li>
+					<li>Allow choice of removing NI (niggling injuries).</li>
+					<li>Allow firing or rebuying of players.</li>
+					<li>Updates team treasury to remaining funds.</li>
+				</ul>
+				<p>What this page WILL NOT do:</p>
+				<ul>
+					<li>Preform rebuys for BB Sevens (ie: not implemented).</li>
+					<li>Remove STAT injuries. This should be done via the Team Admin Tools.</li>
+					<li>Purchase new players. This should be done via the Team Management Tools using remaining funds.</li>
+				</ul>
+				<p style="color:#298000">Rebuy Funds Capped at <?php if ($rules['max_rebuy'] == -1) { echo 'UNLIMITED'; } else { echo ($rules['max_rebuy'] / 1000) . 'k'; } ?>.</p>
+				<p style="color:#FF0000;">WARNING: a completed Team Rebuy CANNOT be undone!</p>
+			</td>
+		</tr>
+	</table>
+	<br><br>
     <form method='POST'>
     Select Team: <input type="text" id='team_as' name="team_as" size="30" maxlength="50" value="<?php echo $team;?>">
     <script>
@@ -117,7 +147,7 @@ protected static function _showteam($tid)
 		if ($m_error !== '')
 			echo '<li>' . $m_error . '</li>';
 		echo '</ul><p><a href="'.urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$t->team_id,false,false).'">Go to Team Page to resolve.</a></p>';
-		#return false;
+		return false;
 	}
 	
 	echo "<form name='rebuy_form'>";
@@ -155,7 +185,7 @@ protected static function _showteam($tid)
 				treasury -= document.getElementById('cl_price').value;
 				<?php
 				foreach ($players as $p) {
-					echo "				treasury -= document.getElementById('rebuy_action_".$p->player_id."').value;";
+					echo "treasury -= document.getElementById('rebuy_action_".$p->player_id."').value;";
 				}
 				?>
 				document.getElementById('treasury_new_viz').innerText = treasury;
