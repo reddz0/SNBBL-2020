@@ -121,14 +121,14 @@ protected static function _showteam($tid)
 	}
 	
 	echo "<form name='rebuy_form'>";
-	self::_teamgoods($ALLOW_EDIT, $t);
+	self::_teamgoods($ALLOW_EDIT, $t, $players);
 	self::_roster($ALLOW_EDIT, $DETAILED, $t, $players);
 	echo "</form>";
 	return true;
 }
 
-	protected static function _teamgoods($ALLOW_EDIT, $t) {
-		global $settings, $lng, $coach, $DEA, $racesNoApothecary;
+	protected static function _teamgoods($ALLOW_EDIT, $t, $players) {
+		global $settings, $rules, $lng, $coach, $DEA, $racesNoApothecary;
 		$team = $t; // Copy. Used instead of $this for readability.
 		$race = new Race($t->f_race_id);
 		$rr_price = $DEA[$race->race]['other']['rr_cost'];
@@ -136,46 +136,105 @@ protected static function _showteam($tid)
 
 		?>
 		<script type="text/javascript">
-			function updateTreasury() {
+			function updateRaisedFunds() {
 				var treasury = <?php echo $t->treasury / 1000; ?> + 1000;
-				treasury += document.getElementById('num_gp').value * 20;
-				treasury += document.getElementById('num_gw').value * 20;
-				treasury += document.getElementById('num_gd').value * 10;
-				document.getElementById('rebuy_delta').value = treasury;
+				treasury += Number(document.getElementById('num_gp').value) * 20;
+				treasury += Number(document.getElementById('num_gw').value) * 20;
+				treasury += Number(document.getElementById('num_gd').value) * 10;
+				if (<?php echo $rules['max_rebuy'] ?> !== -1) { treasury = Math.min(treasury, <?php echo $rules['max_rebuy'] / 1000 ?>); }
+				document.getElementById('rebuy_funds_viz').innerText = treasury;
+				document.getElementById('rebuy_funds').value = treasury;
+				updateTreasury();
+			}
+			function updateTreasury() {
+				var treasury = Number(document.getElementById('rebuy_funds').value) + Number(document.getElementById('rebuy_delta').value);
+				if (<?php echo $rules['max_rebuy'] ?> !== -1) { treasury = Math.min(treasury, <?php echo $rules['max_rebuy'] / 1000 ?>); }
+				treasury -= document.getElementById('apo_price').value;
+				treasury -= document.getElementById('rr_price').value;
+				treasury -= document.getElementById('ac_price').value;
+				treasury -= document.getElementById('cl_price').value;
+				<?php
+				foreach ($players as $p) {
+					echo "				treasury -= document.getElementById('rebuy_action_".$p->player_id."').value;";
+				}
+				?>
+				document.getElementById('treasury_new_viz').innerText = treasury;
+				document.getElementById('treasury_new').value = treasury;
 			}
 			function rebuyApo() {
-				if (document.getElementById('rebuy_apo').checked) { document.getElementById('apo_price').value = 50; }
-				else { document.getElementById('apo_price').value = 0; }
+				if (document.getElementById('rebuy_apo').checked) {
+					document.getElementById('apo_price_viz').innerText = <?php echo $rules['cost_apothecary'] / 1000 ?>;
+					document.getElementById('apo_price').value = <?php echo $rules['cost_apothecary'] / 1000 ?>;
+				}
+				else {
+					document.getElementById('apo_price_viz').innerText = 0;
+					document.getElementById('apo_price').value = 0;
+				}
+				updateTreasury();
 			}
 			function rebuyRR() {
-				document.getElementById('rr_price').value = document.getElementById('rebuy_rr').value * <?php echo $rr_price / 1000; ?>;
+				var rr_amount = Number(document.getElementById('rebuy_rr').value);
+				var rr_max = <?php echo $rules['max_rerolls'] ?>;
+				if (rr_amount > rr_max) {
+					alert('Value entered exceeds the maximum Rerolls of ' + rr_max + ' allowed!');
+					document.getElementById('rebuy_rr').value = 0;
+					rr_amount = 0;
+				}
+				var rr_price = rr_amount * <?php echo $rr_price / 1000; ?>;
+				document.getElementById('rr_price_viz').innerText = rr_price;
+				document.getElementById('rr_price').value = rr_price;
+				updateTreasury();
 			}
 			function rebuyAC() {
-				document.getElementById('ac_price').value = document.getElementById('rebuy_ac').value * 10;
+				var ac_amount = Number(document.getElementById('rebuy_ac').value);
+				var ac_max = <?php echo $rules['max_ass_coaches'] ?>;
+				if (ac_amount > ac_max) {
+					alert('Value entered exceeds the maximum Assistant Coaches of ' + ac_max + ' allowed!');
+					document.getElementById('rebuy_ac').value = 0;
+					ac_amount = 0;
+				}
+				var ac_price = ac_amount * <?php echo $rules['cost_ass_coaches'] / 1000 ?>;
+				document.getElementById('ac_price_viz').innerText = ac_price;
+				document.getElementById('ac_price').value = ac_price;
+				updateTreasury();
 			}
 			function rebuyCL() {
-				document.getElementById('cl_price').value = document.getElementById('rebuy_cl').value * 10;
+				var cl_amount = Number(document.getElementById('rebuy_cl').value);
+				var cl_max = <?php echo $rules['max_cheerleaders'] ?>;
+				if (cl_amount > cl_max) {
+					alert('Value entered exceeds the maximum Cheerleaders of ' + cl_max + ' allowed!');
+					document.getElementById('rebuy_cl').value = 0;
+					cl_amount = 0;
+				}
+				var cl_price = cl_amount * <?php echo $rules['cost_cheerleaders'] / 1000 ?>;
+				document.getElementById('cl_price_viz').innerText = cl_price;
+				document.getElementById('cl_price').value = cl_price;
+				updateTreasury();
 			}
 		</script>
-		<p><b>Games Played:</b> <input type="text" onchange="numError(this);updateTreasury();" size="1" maxlength="2" name="num_gp" value="0" id="num_gp" /></p>
-		<p><b>Games Won:</b> <input type="text" onchange="numError(this);updateTreasury();" size="1" maxlength="2" name="num_gw" value="0" id="num_gw" /></p>
-		<p><b>Games Drawn:</b> <input type="text" onchange="numError(this);updateTreasury();" size="1" maxlength="2" name="num_gd" value="0" id="num_gd" /></p>
+		<p><b>Games Played:</b> <input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gp" value="0" id="num_gp" /></p>
+		<p><b>Games Won:</b> <input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gw" value="0" id="num_gw" /></p>
+		<p><b>Games Drawn:</b> <input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gd" value="0" id="num_gd" /></p>
 
 		<table class="common" style="width:50%">
 			<tr class="commonhead">
-				<td colspan="3"><b>
+				<td colspan="5"><b>
 				<?php echo $t->name;?> Treasury
 				</b></td>
 			</tr>
 			<tr>
 				<td><i>Item</i></td>
 				<td><i>Current Amount</i></td>
-				<td><i>Rebuy Amount</i></td>
+				<td><i>Funds Raised</i></td>
+				<td><i>Extra</i></td>
+				<td><i>Remaining Treasury</i></td>
 			</tr>
 			<tr>
 				<td style="background-color:#FFFFFF;color:#000000;"><b>Treasury</b></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->treasury / 1000; ?>k</td>
-				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" onchange="numError(this);" size="5" maxlength="10" value="0" name="rebuy_delta" id="rebuy_delta" />k</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="rebuy_funds" id="rebuy_funds" /><span id="rebuy_funds_viz">0</span>k</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" onchange="numError(this,true);updateTreasury();" size="5" maxlength="10" value="0" name="rebuy_delta" id="rebuy_delta" />k</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="treasury_new" id="treasury_new" /><span id="treasury_new_viz">0</span>k</td>
 			</tr>
 		</table>
 		<p>&nbsp;</p>
@@ -202,7 +261,7 @@ protected static function _showteam($tid)
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->apothecary; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->apothecary * 50; ?>k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><input type="checkbox" name="rebuy_apo" id="rebuy_apo" onchange="rebuyApo();" /></td>
-				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="3" maxlength="3" value="0" name="apo_price" id="apo_price" />k</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="apo_price" id="apo_price" /><span id="apo_price_viz">0</span>k</td>
 			</tr>
 		<?php
 		}
@@ -213,7 +272,7 @@ protected static function _showteam($tid)
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->rerolls; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->rerolls * $rr_price / 1000; ?>k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="2" maxlength="2" onchange="numError(this);rebuyRR();" value="0" name="rebuy_rr" id="rebuy_rr" /></td>
-				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="3" maxlength="3" value="0" name="rr_price" id="rr_price" />k</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="rr_price" id="rr_price" /><span id="rr_price_viz">0</span>k</td>
 			</tr>
 			<tr>
 				<td style="background-color:#FFFFFF;color:#000000;"><b>Assistant Coaches</b></td>
@@ -221,7 +280,7 @@ protected static function _showteam($tid)
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->ass_coaches; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->ass_coaches * 10; ?>k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="2" maxlength="2" onchange="numError(this);rebuyAC();" value="0" name="rebuy_ac" id="rebuy_ac" /></td>
-				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="3" maxlength="3" value="0" name="ac_price" id="ac_price" />k</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="ac_price" id="ac_price" /><span id="ac_price_viz">0</span>k</td>
 			</tr>
 			<tr>
 				<td style="background-color:#FFFFFF;color:#000000;"><b>Cheerleaders</b></td>
@@ -229,7 +288,7 @@ protected static function _showteam($tid)
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->cheerleaders; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->cheerleaders * 10; ?>k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="2" maxlength="2" onchange="numError(this);rebuyCL();" value="0" name="rebuy_cl" id="rebuy_cl" /></td>
-				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="3" maxlength="3" value="0" name="cl_price" id="cl_price" />k</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="cl_price" id="cl_price" /><span id="cl_price_viz">0</span>k</td>
 			</tr>
 		</table>
 		<p>&nbsp;</p>
@@ -298,10 +357,8 @@ protected static function _showteam($tid)
 			$p->skills   = '<small>'.$p->getSkillsStr(true).'</small>';
 			$p->injs     = $p->getInjsStr(true);
 			$p->position = "<table style='border-spacing:0px;'><tr><td><img align='left' src='$p->icon' alt='player avatar'></td><td>".$lng->getTrn("position/".strtolower($lng->FilterPosition($p->position)))."</td></tr></table>";
-			if ($DETAILED) {
-				$p->mv_cas = "$p->mv_bh/$p->mv_si/$p->mv_ki";
-				$p->mv_spp = "$p->mv_spp/$p->extra_spp";
-			}
+			$p->mv_cas = "$p->mv_bh/$p->mv_si/$p->mv_ki";
+			$p->mv_spp = "$p->mv_spp/$p->extra_spp";
 			// Characteristic's colors
 			foreach (array('ma', 'ag', 'pa', 'av', 'st') as $chr) {
 				$sub = $p->$chr - $p->{"def_$chr"};
@@ -362,7 +419,7 @@ protected static function _showteam($tid)
 			else								$p->rebuy = $p->getRebuy();
 			if ($p->inj_ni > 0)
 				$p->heal_ni = "<input type='checkbox' id='heal_ni_".$p->player_id."' name='heal_ni_".$p->player_id."' />";
-			$p->rebuy_action = "<select id='rebuy_action_".$p->player_id."' id='rebuy_action_".$p->player_id."'><option>Release</option><option>Rebuy</option></select>";
+			$p->rebuy_action = "<select id='rebuy_action_".$p->player_id."' id='rebuy_action_".$p->player_id."' onchange='updateTreasury();'><option value='0'>Release</option><option value='".($p->rebuy / 1000)."'>Rebuy</option></select>";
 		}
 
 		/******************************
@@ -373,26 +430,19 @@ protected static function _showteam($tid)
 		$allowEdit = (isset($coach) && $coach)
 			? $coach->isMyTeam($team->team_id) || $coach->mayManageObj(T_OBJ_TEAM, $team->team_id)
 			: false;
-		$fields = array(
-			'nr'        => array('desc' => '#', 'nosort' => true),
-			'name'      => array('desc' => $lng->getTrn('common/name'), 'nosort' => true),
-			'info'      => array('desc' => '', 'nosort' => true, 'icon' => true, 'href' => array('link' => urlcompile(T_URL_PROFILE,T_OBJ_PLAYER,false,false,false), 'field' => 'obj_id', 'value' => 'player_id')),
-			'position'  => array('desc' => $lng->getTrn('common/pos'), 'nosort' => true),
-			'skills'    => array('desc' => $lng->getTrn('common/skills'), 'nosort' => true),
-			'injs'      => array('desc' => $lng->getTrn('common/injs'), 'nosort' => true),
-			'mv_spp'    => array('desc' => ($DETAILED) ? 'SPP/extra' : 'SPP', 'nosort' => ($DETAILED) ? true : false),
-			'value'     => array('desc' => $lng->getTrn('common/value'), 'kilo' => true, 'suffix' => 'k', 'nosort' => true),
-			'heal_ni'	=> array('desc' => 'Heal Ni', 'nosort' => true),
-			'rebuy_action'	=> array('desc' => $lng->getTrn('common/select'), 'nosort' => true),
-		);
 		$fieldsDetailed = array(
 			'nr'        => array('desc' => '#', 'nosort' => true),
 			'name'      => array('desc' => $lng->getTrn('common/name'), 'nosort' => true),
 			'info'      => array('desc' => '', 'nosort' => true, 'icon' => true, 'href' => array('link' => urlcompile(T_URL_PROFILE,T_OBJ_PLAYER,false,false,false), 'field' => 'obj_id', 'value' => 'player_id')),
 			'position'  => array('desc' => $lng->getTrn('common/pos'), 'nosort' => true),
+			'ma'        => array('desc' => 'Ma'),
+			'st'        => array('desc' => 'St'),
+			'ag'        => array('desc' => 'Ag', 'suffix' => '+'),
+			'pa'        => array('desc' => 'Pa'),	
+			'av'        => array('desc' => 'Av', 'suffix' => '+'),
 			'skills'    => array('desc' => $lng->getTrn('common/skills'), 'nosort' => true),
 			'injs'      => array('desc' => $lng->getTrn('common/injs'), 'nosort' => true),
-			'mv_spp'    => array('desc' => ($DETAILED) ? 'SPP/extra' : 'SPP', 'nosort' => ($DETAILED) ? true : false),
+			'mv_spp'    => array('desc' => 'SPP/extra', 'nosort' => true),
 			'value'     => array('desc' => $lng->getTrn('common/value'), 'kilo' => true, 'suffix' => 'k', 'nosort' => true),
 			'seasons'	=> array('desc' => 'Seasons', 'nosort' => true),
 			'rebuy'		=> array('desc' => 'Rebuy', 'kilo' => true, 'suffix' => 'k', 'nosort' => true),
@@ -403,10 +453,10 @@ protected static function _showteam($tid)
 			$team->name.' Roster',
 			urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$team->team_id,false,false).(($DETAILED) ? '&amp;detailed=1' : '&amp;detailed=0'),
 			$players,
-			($DETAILED) ? $fieldsDetailed : $fields,
+			$fieldsDetailed,
 			sort_rule('player'),
 			array(),
-			array('color' => ($DETAILED) ? true : false, 'doNr' => false, 'noHelp' => true)
+			array('color' => false, 'doNr' => false, 'noHelp' => true)
 		);
 		?>
 		<!-- Following HTML is from class_team_htmlout.php _roster -->
