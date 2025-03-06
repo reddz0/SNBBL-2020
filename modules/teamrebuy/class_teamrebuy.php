@@ -310,7 +310,7 @@ protected static function _showteam($tid)
 			<tr>
 				<td style="background-color:#FFFFFF;color:#000000;"><b>Dedicated Fans</b></td>
 				<td style="background-color:#FFFFFF;color:#000000;">-</td>
-				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->ff_bought; ?></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->ff; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;">-</td>
 				<td style="background-color:#FFFFFF;color:#000000;">-</td>
 				<td style="background-color:#FFFFFF;color:#000000;">-</td>
@@ -571,12 +571,15 @@ protected static function _showteam($tid)
 			$outStr = '(' . $p->nr . ') ' . $p->name . ' : ';
 			if ($p->is_retired) {
 				$outStr .= ' (Removed Retired) ';
+				$p->removeMNG();
 			} elseif ($p->is_mng) {
 				$outStr .= ' (Removed MNG) ';
+				$p->removeMNG();
 			}
 			if (isset($_POST['heal_ni_'.$p->player_id])) {
 				if ($_POST['heal_ni_'.$p->player_id] == 1) {
 					$outStr .= ' (Removed NI) ';
+					$p->removeNiggle();
 				}
 			}
 			if (isset($_POST['rebuy_action_'.$p->player_id])) {
@@ -584,17 +587,21 @@ protected static function _showteam($tid)
 					$outStr .= ' <span style="color:#298000">(REHIRED)</span> ';
 				} else {
 					$outStr .= ' <span style="color:#FF0000">(RELEASED)</span> ';
+					$p->sell();
 				}
 			} else {
-					$outStr .= ' <span style="color:#FF0000">(RELEASED)</span> ';
+				$outStr .= ' <span style="color:#FF0000">(RELEASED)</span> ';
+				$p->sell();
 			}
 			$newsStr .= '<li>' . $outStr . '</li>';
 		}
 		$newsStr .= '</ul>';
 		$newsStr .= '<p>Team Goods:</p>';
 		$newsStr .= '<ul>';
+		$apo_set = 0;
 		if (isset($_POST['rebuy_apo']) && $apoth) {
 			$newsStr .= '<li>Set Apothecary = ' . ($_POST['rebuy_apo'] == 'on' ? 'YES' : 'NO') . '</li>';
+			$apo_set = 1;
 		} elseif ($apoth) {
 			$newsStr .= '<li>Set Apothecary = NO</li>';
 		}
@@ -603,9 +610,14 @@ protected static function _showteam($tid)
 		$newsStr .= '<li>Set Cheerleaders = ' . $_POST['rebuy_cl'] . '</li>';
 		$newsStr .= '<li>Set Treasury = ' . $_POST['treasury_new'] . 'k</li>';
 		$newsStr .= '</ul>';
+		
+		$team_sql = "UPDATE teams SET apothecary = " . $apo_set . ", rerolls = " . $_POST['rebuy_rr'] . ", ass_coaches = " . $_POST['rebuy_ac'] . ", cheerleaders = " . $_POST['rebuy_cl'] . ", treasury = " . ($_POST['treasury_new'] * 1000) . " WHERE team_id = " . $tid . ";";
+		mysql_query($team_sql);
+		SQLTriggers::run(T_SQLTRIG_TEAM_DPROPS, array('id' => $team->team_id, 'obj' => $team)); # Update TV.
+		
 		echo $newsStr;
-		echo '<p>Recalculating...</p>';
 		echo '<p>Writting team news...</p>';
+		$team->writeNews($newsStr);
 		echo '<p>DONE!</p>';
 		echo '<p style="color:#FF0000;">REMINDER: You may need to manually remove STAT injuries to complete Seasons End!</p>';
 		echo '<p><a href="' . urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$team->team_id,false,false) . '">Go to Team Roster</a></p>';
