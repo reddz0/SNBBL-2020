@@ -67,6 +67,7 @@ public static function main($argv) # argv = argument vector (array).
 protected static function _teamSelect() 
 {
     global $rules, $lng;
+
     $_SUBMITTED = isset($_POST['team_as']) && $_POST['team_as'];
     $team = '';
     if ($_SUBMITTED) {
@@ -133,8 +134,6 @@ protected static function _showteam($tid)
 
 	title($t->name . ' Team Rebuy');
 
-	setupGlobalVars(T_SETUP_GLOBAL_VARS__LOAD_LEAGUE_SETTINGS, array('lid' => $t->f_lid)); // Load correct $rules for league.
-
 	/* Argument(s) passed to generating functions. */
 	$ALLOW_EDIT = $t->allowEdit(); # Show team action boxes?
 	$DETAILED   = true; #(isset($_GET['detailed']) && $_GET['detailed'] == 1);# Detailed roster view?
@@ -144,7 +143,7 @@ protected static function _showteam($tid)
 	list($matches, $pages) = Stats::getMatches(T_OBJ_TEAM, $t->team_id, false, false, false, false, array(), true, true);
 	if (is_array($matches) && count($matches) > 0)
 		$m_error = 'This team has ' . count($matches) . ' unplayed scheduled matches. Are you sure they are ready to ReBuy?';
-	list($players, $players_backup, $jm_error) = self::_loadPlayers($DETAILED, $t); # Should come after handleActions().
+	list($players, $players_backup, $jm_error) = self::_loadPlayers($t);
 	if ($jm_error !== '' || $m_error !== '') {
 		echo '<p><strong>ERRORS FOUND</strong></p><ul>';
 		if ($jm_error !== '')
@@ -164,6 +163,7 @@ protected static function _showteam($tid)
 
 	protected static function _teamgoods($ALLOW_EDIT, $t, $players) {
 		global $settings, $rules, $lng, $coach, $DEA, $racesNoApothecary;
+		setupGlobalVars(T_SETUP_GLOBAL_VARS__LOAD_LEAGUE_SETTINGS, array('lid' => $t->f_lid)); // Load correct $rules for league.
 		$team = $t; // Copy. Used instead of $this for readability.
 		$race = new Race($t->f_race_id);
 		$rr_price = $DEA[$race->race]['other']['rr_cost'];
@@ -359,7 +359,7 @@ protected static function _showteam($tid)
 		
 	}
 
-	protected static function _loadPlayers($DETAILED, $t) {
+	protected static function _loadPlayers($t) {
 		/*
 			Lets prepare the players for the roster.
 		*/
@@ -390,6 +390,7 @@ protected static function _showteam($tid)
 
 	protected static function _roster($ALLOW_EDIT, $DETAILED, $t, $players) {
 		global $rules, $settings, $lng, $skillididx, $coach, $DEA;
+		setupGlobalVars(T_SETUP_GLOBAL_VARS__LOAD_LEAGUE_SETTINGS, array('lid' => $t->f_lid)); // Load correct $rules for league.
 		$team = $t; // Copy. Used instead of $this for readability.
 
 		/******************************
@@ -481,8 +482,8 @@ protected static function _showteam($tid)
 			elseif ($p->is_journeyman)          $p->rebuy = 'n/a';
 			else								$p->rebuy = $p->getRebuy();
 			if ($p->inj_ni > 0)
-				$p->heal_ni = "<input type='checkbox' id='heal_ni_".$p->player_id."' name='heal_ni_".$p->player_id."' />";
-			$p->rebuy_action = "<select id='rebuy_action_".$p->player_id."' id='rebuy_action_".$p->player_id."' onchange='updateTreasury();'><option value='0'>Release</option><option value='".($p->rebuy / 1000)."'>Rebuy</option></select>";
+				$p->heal_ni = "<input type='checkbox' id='heal_ni_".$p->player_id."' name='heal_ni_".$p->player_id."' value='1' />";
+			$p->rebuy_action = "<select name='rebuy_action_".$p->player_id."' id='rebuy_action_".$p->player_id."' onchange='updateTreasury();'><option value='0'>Release</option><option value='".($p->rebuy / 1000)."'>Rebuy</option></select>";
 		}
 
 		/******************************
@@ -514,7 +515,7 @@ protected static function _showteam($tid)
 		);
 		HTMLOUT::sort_table(
 			$team->name.' Roster',
-			urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$team->team_id,false,false).(($DETAILED) ? '&amp;detailed=1' : '&amp;detailed=0'),
+			urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$team->team_id,false,false),
 			$players,
 			$fieldsDetailed,
 			sort_rule('player'),
@@ -552,7 +553,68 @@ protected static function _showteam($tid)
 	}
 
 	protected static function _doRebuy($tid) {
-		title("REBUYING " . $tid);
+		global $racesNoApothecary;
+		$team = new Team($tid);
+		title($team->name . ' Team Rebuy');
+		$apoth = !in_array($team->f_race_id, $racesNoApothecary);
+		?>
+		<center>
+		<table class="common" style="width:50%">
+			<tr>
+				<td style="background-color:#FFFFFF;color:#000000;padding-left:15px;padding-right:15px;">
+		<?php
+		$newsStr = '<p>Seasons End Team Rebuy</p>'; // ('. date('D M d Y') .')
+		$newsStr .= '<p>Team Roster:</p>';
+		$newsStr .= '<ul>';
+		list($players, $players_backup, $jm_error) = self::_loadPlayers($team);
+		foreach ($players as $p) {
+			$outStr = '(' . $p->nr . ') ' . $p->name . ' : ';
+			if ($p->is_retired) {
+				$outStr .= ' (Removed Retired) ';
+			} elseif ($p->is_mng) {
+				$outStr .= ' (Removed MNG) ';
+			}
+			if (isset($_POST['heal_ni_'.$p->player_id])) {
+				if ($_POST['heal_ni_'.$p->player_id] == 1) {
+					$outStr .= ' (Removed NI) ';
+				}
+			}
+			if (isset($_POST['rebuy_action_'.$p->player_id])) {
+				if ($_POST['rebuy_action_'.$p->player_id] > 0) {
+					$outStr .= ' <span style="color:#298000">(REHIRED)</span> ';
+				} else {
+					$outStr .= ' <span style="color:#FF0000">(RELEASED)</span> ';
+				}
+			} else {
+					$outStr .= ' <span style="color:#FF0000">(RELEASED)</span> ';
+			}
+			$newsStr .= '<li>' . $outStr . '</li>';
+		}
+		$newsStr .= '</ul>';
+		$newsStr .= '<p>Team Goods:</p>';
+		$newsStr .= '<ul>';
+		if (isset($_POST['rebuy_apo']) && $apoth) {
+			$newsStr .= '<li>Set Apothecary = ' . ($_POST['rebuy_apo'] == 'on' ? 'YES' : 'NO') . '</li>';
+		} elseif ($apoth) {
+			$newsStr .= '<li>Set Apothecary = NO</li>';
+		}
+		$newsStr .= '<li>Set Rerolls = ' . $_POST['rebuy_rr'] . '</li>';
+		$newsStr .= '<li>Set Assistant Coaches = ' . $_POST['rebuy_ac'] . '</li>';
+		$newsStr .= '<li>Set Cheerleaders = ' . $_POST['rebuy_cl'] . '</li>';
+		$newsStr .= '<li>Set Treasury = ' . $_POST['treasury_new'] . 'k</li>';
+		$newsStr .= '</ul>';
+		echo $newsStr;
+		echo '<p>Recalculating...</p>';
+		echo '<p>Writting team news...</p>';
+		echo '<p>DONE!</p>';
+		echo '<p style="color:#FF0000;">REMINDER: You may need to manually remove STAT injuries to complete Seasons End!</p>';
+		echo '<p><a href="' . urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$team->team_id,false,false) . '">Go to Team Roster</a></p>';
+		?>
+				</td>
+			</tr>
+		</table>
+		</center>
+		<?php
 	}
 
 /*
