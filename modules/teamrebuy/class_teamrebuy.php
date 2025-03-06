@@ -54,22 +54,22 @@ class TeamRebuy implements ModuleInterface
 			fatal("Sorry. Your access level does not allow you opening the requested page.");
 		}
 		if (!isset($rules['max_rebuy'])) {
-			fatal("Missing rules['max_rebuy'] value in global/league settings file.");
+			fatal($lng->getTrn('errors/missing_max_rebuy', __CLASS__));
 		}
 		elseif ($rules['max_rebuy'] == 0 || $rules['max_rebuy'] < -1) {
-			fatal("Incorrect value for rules['max_rebuy'] in global/league settings file.");
+			fatal($lng->getTrn('errors/incorrect_max_rebuy', __CLASS__));
 		}
 		
 		$tid = array_shift($argv);
 		if (!is_numeric($tid) || $tid == 0) {
-			title('Team Rebuy');
+			title($lng->getTrn('name', __CLASS__));
 			$tid = self::_teamSelect();
 		}
 		if (is_numeric($tid) && $tid > 0) {
 			self::_showteam($tid);
 		}
 		if (isset($_POST['COMMIT_REBUY']) && isset($_POST['tid'])) {
-			if ($_POST['COMMIT_REBUY'] == 'COMMIT REBUY' && is_numeric($_POST['tid'])) {
+			if ($_POST['COMMIT_REBUY'] !== '' && is_numeric($_POST['tid'])) {
 				self::_doRebuy($_POST['tid']);
 			}
 		}
@@ -91,29 +91,14 @@ class TeamRebuy implements ModuleInterface
 		<table class="common" style="width:50%">
 			<tr>
 				<td style="background-color:#FFFFFF;color:#000000;padding-left:15px;padding-right:15px;">
-					<p>What this page WILL do:</p>
-					<ul>
-						<li>Calculate the rebuy funds.</li>
-						<li>Allow rebuy and purchase of additional team goods. Including Rerolls at initial cost.</li>
-						<li>Remove all MNG (miss next game) statuses.</li>
-						<li>Allow choice of removing NI (niggling injuries).</li>
-						<li>Allow firing or rebuying of players.</li>
-						<li>Updates team treasury to remaining funds.</li>
-					</ul>
-					<p>What this page WILL NOT do:</p>
-					<ul>
-						<li>Preform rebuys for BB Sevens (ie: not implemented).</li>
-						<li>Remove STAT injuries. This should be done via the Team Admin Tools.</li>
-						<li>Purchase new players. This should be done via the Team Management Tools using remaining funds.</li>
-					</ul>
-					<p style="color:#298000">Rebuy Funds Capped at <?php if ($rules['max_rebuy'] == -1) { echo 'UNLIMITED'; } else { echo ($rules['max_rebuy'] / 1000) . 'k'; } ?>.</p>
-					<p style="color:#FF0000;">WARNING: a completed Team Rebuy CANNOT be undone!</p>
+					<?php echo $lng->getTrn('help', __CLASS__); ?>
+					<p style="color:#298000"><?php echo $lng->getTrn('fundcap', __CLASS__); ?> <?php if ($rules['max_rebuy'] == -1) { echo 'UNLIMITED'; } else { echo ($rules['max_rebuy'] / 1000) . 'k'; } ?>.</p>
 				</td>
 			</tr>
 		</table>
 		<br><br>
 		<form method='POST'>
-		Select Team: <input type="text" id='team_as' name="team_as" size="30" maxlength="50" value="<?php echo $team;?>">
+		<?php echo $lng->getTrn('select', __CLASS__); ?> : <input type="text" id='team_as' name="team_as" size="30" maxlength="50" value="<?php echo $team;?>">
 		<script>
 			$(document).ready(function(){
 				var options, a;
@@ -126,7 +111,7 @@ class TeamRebuy implements ModuleInterface
 			});
 		</script>
 		<br><br>
-		<input type="submit" name="start_rebuy" value="START!">
+		<input type="submit" name="start_rebuy" value="<?php echo $lng->getTrn('start', __CLASS__); ?>">
 		</form>
 		</center>
 		<br>
@@ -136,7 +121,7 @@ class TeamRebuy implements ModuleInterface
 
 	protected static function _showteam($tid)
 	{
-		global $coach;
+		global $coach, $lng;
 		
 		$t = new Team($tid);
 
@@ -144,7 +129,7 @@ class TeamRebuy implements ModuleInterface
 			fatal("Sorry. Your access level does not allow you opening the requested page.");
 		}
 
-		title($t->name . ' Team Rebuy');
+		title($t->name . ' ' . $lng->getTrn('name', __CLASS__));
 
 		/* Argument(s) passed to generating functions. */
 		$ALLOW_EDIT = $t->allowEdit(); # Show team action boxes?
@@ -153,15 +138,15 @@ class TeamRebuy implements ModuleInterface
 		$m_error = '';
 		list($matches, $pages) = Stats::getMatches(T_OBJ_TEAM, $t->team_id, false, false, false, false, array(), true, true);
 		if (is_array($matches) && count($matches) > 0)
-			$m_error = 'This team has ' . count($matches) . ' unplayed scheduled matches. Are you sure they are ready to ReBuy?';
+			$m_error = sprintf($lng->getTrn('errors/unplayed_matches', __CLASS__), count($matches));
 		list($players, $players_backup, $jm_error) = self::_loadPlayers($t);
 		if ($jm_error !== '' || $m_error !== '') {
-			echo '<p><strong>ERRORS FOUND</strong></p><ul>';
+			echo '<p><strong>' . $lng->getTrn('errors/errors', __CLASS__) . '</strong></p><ul>';
 			if ($jm_error !== '')
 				echo '<li>' . $jm_error . '</li>';
 			if ($m_error !== '')
 				echo '<li>' . $m_error . '</li>';
-			echo '</ul><p><a href="'.urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$t->team_id,false,false).'">Go to Team Page to resolve.</a></p>';
+			echo '</ul><p><a href="'.urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$t->team_id,false,false).'">' . $lng->getTrn('resolvelnk', __CLASS__) . '</a></p>';
 			return false;
 		}
 		
@@ -208,7 +193,7 @@ class TeamRebuy implements ModuleInterface
 				document.getElementById('treasury_new').value = treasury;
 				if (treasury < 0) {
 					document.getElementById('COMMIT_REBUY').disabled = true;
-					alert("Remaining Treasury is NEGATIVE!");
+					alert("<?php echo $lng->getTrn('errors/negtreasury', __CLASS__); ?>");
 				} else { document.getElementById('COMMIT_REBUY').disabled = false; }
 			}
 			function rebuyApo() {
@@ -226,7 +211,7 @@ class TeamRebuy implements ModuleInterface
 				var rr_amount = Number(document.getElementById('rebuy_rr').value);
 				var rr_max = <?php echo $rules['max_rerolls'] ?>;
 				if (rr_amount > rr_max) {
-					alert('Value entered exceeds the maximum Rerolls of ' + rr_max + ' allowed!');
+					alert('<?php echo $lng->getTrn('errors/maxrr', __CLASS__); ?>');
 					document.getElementById('rebuy_rr').value = 0;
 					rr_amount = 0;
 				}
@@ -239,7 +224,7 @@ class TeamRebuy implements ModuleInterface
 				var ac_amount = Number(document.getElementById('rebuy_ac').value);
 				var ac_max = <?php echo $rules['max_ass_coaches'] ?>;
 				if (ac_amount > ac_max) {
-					alert('Value entered exceeds the maximum Assistant Coaches of ' + ac_max + ' allowed!');
+					alert('<?php echo $lng->getTrn('errors/maxac', __CLASS__) ?>');
 					document.getElementById('rebuy_ac').value = 0;
 					ac_amount = 0;
 				}
@@ -252,7 +237,7 @@ class TeamRebuy implements ModuleInterface
 				var cl_amount = Number(document.getElementById('rebuy_cl').value);
 				var cl_max = <?php echo $rules['max_cheerleaders'] ?>;
 				if (cl_amount > cl_max) {
-					alert('Value entered exceeds the maximum Cheerleaders of ' + cl_max + ' allowed!');
+					alert('<?php echo $lng->getTrn('errors/maxcl', __CLASS__) ?>');
 					document.getElementById('rebuy_cl').value = 0;
 					cl_amount = 0;
 				}
@@ -267,13 +252,13 @@ class TeamRebuy implements ModuleInterface
 		<table class="common" style="width:50%">
 			<tr class="commonhead">
 				<td colspan="3"><b>
-				<?php echo $t->name;?> Season Record
+				<?php echo $t->name;?> <?php echo $lng->getTrn('record', __CLASS__); ?>
 				</b></td>
 			</tr>
 			<tr>
-				<td><i>Games Played</i></td>
-				<td><i>Games Won</i></td>
-				<td><i>Games Drawn</i></td>
+				<td><i><?php echo $lng->getTrn('g_played', __CLASS__); ?></i></td>
+				<td><i><?php echo $lng->getTrn('g_won', __CLASS__); ?></i></td>
+				<td><i><?php echo $lng->getTrn('g_drawn', __CLASS__); ?></i></td>
 			</tr>
 			<tr>
 				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gp" value="0" id="num_gp" /></td>
@@ -285,18 +270,18 @@ class TeamRebuy implements ModuleInterface
 		<table class="common" style="width:50%">
 			<tr class="commonhead">
 				<td colspan="5"><b>
-				<?php echo $t->name;?> Treasury
+				<?php echo $t->name;?> <?php echo $lng->getTrn('matches/report/treas'); ?>
 				</b></td>
 			</tr>
 			<tr>
-				<td><i>Item</i></td>
-				<td><i>Current Amount</i></td>
-				<td><i>Funds Raised</i></td>
-				<td><i>Extra</i></td>
-				<td><i>Remaining Treasury</i></td>
+				<td><i><?php echo $lng->getTrn('item', __CLASS__); ?></i></td>
+				<td><i><?php echo $lng->getTrn('current', __CLASS__); ?></i></td>
+				<td><i><?php echo $lng->getTrn('funds', __CLASS__); ?></i></td>
+				<td><i><?php echo $lng->getTrn('extra', __CLASS__); ?></i></td>
+				<td><i><?php echo $lng->getTrn('remain_treas', __CLASS__); ?></i></td>
 			</tr>
 			<tr>
-				<td style="background-color:#FFFFFF;color:#000000;"><b>Treasury</b></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><b><?php echo $lng->getTrn('matches/report/treas'); ?></b></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->treasury / 1000; ?>k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="rebuy_funds" id="rebuy_funds" /><span id="rebuy_funds_viz">0</span>k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" onchange="numError(this,true);updateTreasury();" size="5" maxlength="10" value="0" name="rebuy_delta" id="rebuy_delta" />k</td>
@@ -307,19 +292,19 @@ class TeamRebuy implements ModuleInterface
 		<table class="common" style="width:50%">
 			<tr class="commonhead">
 				<td colspan="6"><b>
-				<?php echo $t->name;?> Team Goods
+				<?php echo $t->name;?> <?php echo $lng->getTrn('team_goods', __CLASS__); ?>
 				</b></td>
 			</tr>
 			<tr>
-				<td><i>Item</i></td>
-				<td><i>Cost Per</i></td>
-				<td><i>Current Amount</i></td>
-				<td><i>Current Value</i></td>
-				<td><i>Rebuy</i></td>
-				<td><i>Cost</i></td>
+				<td><i><?php echo $lng->getTrn('item', __CLASS__); ?></i></td>
+				<td><i><?php echo $lng->getTrn('costper', __CLASS__); ?></i></td>
+				<td><i><?php echo $lng->getTrn('current', __CLASS__); ?></i></td>
+				<td><i><?php echo $lng->getTrn('current_v', __CLASS__); ?></i></td>
+				<td><i><?php echo $lng->getTrn('rebuyamt', __CLASS__); ?></i></td>
+				<td><i><?php echo $lng->getTrn('cost', __CLASS__); ?></i></td>
 			</tr>
 			<tr>
-				<td style="background-color:#FFFFFF;color:#000000;"><b>Dedicated Fans</b></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><b><?php echo $lng->getTrn('matches/report/ff'); ?></b></td>
 				<td style="background-color:#FFFFFF;color:#000000;">-</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->rg_ff; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;">-</td>
@@ -330,7 +315,7 @@ class TeamRebuy implements ModuleInterface
 		if ($apoth) {
 		?>
 			<tr>
-				<td style="background-color:#FFFFFF;color:#000000;"><b>Apothecary</b></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><b><?php echo $lng->getTrn('common/apothecary'); ?></b></td>
 				<td style="background-color:#FFFFFF;color:#000000;">50k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->apothecary; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->apothecary * 50; ?>k</td>
@@ -341,7 +326,7 @@ class TeamRebuy implements ModuleInterface
 		}
 		?>
 			<tr>
-				<td style="background-color:#FFFFFF;color:#000000;"><b>Re-rolls</b></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><b><?php echo $lng->getTrn('common/reroll'); ?></b></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $rr_price / 1000; ?>k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->rerolls; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->rerolls * $rr_price / 1000; ?>k</td>
@@ -349,7 +334,7 @@ class TeamRebuy implements ModuleInterface
 				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="rr_price" id="rr_price" /><span id="rr_price_viz">0</span>k</td>
 			</tr>
 			<tr>
-				<td style="background-color:#FFFFFF;color:#000000;"><b>Assistant Coaches</b></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><b><?php echo $lng->getTrn('common/ass_coach'); ?></b></td>
 				<td style="background-color:#FFFFFF;color:#000000;">10k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->ass_coaches; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->ass_coaches * 10; ?>k</td>
@@ -357,7 +342,7 @@ class TeamRebuy implements ModuleInterface
 				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="ac_price" id="ac_price" /><span id="ac_price_viz">0</span>k</td>
 			</tr>
 			<tr>
-				<td style="background-color:#FFFFFF;color:#000000;"><b>Cheerleaders</b></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><b><?php echo $lng->getTrn('common/cheerleader'); ?></b></td>
 				<td style="background-color:#FFFFFF;color:#000000;">10k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->cheerleaders; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->cheerleaders * 10; ?>k</td>
@@ -374,7 +359,7 @@ class TeamRebuy implements ModuleInterface
 		/*
 			Lets prepare the players for the roster.
 		*/
-		global $settings;
+		global $settings, $lng;
 		$error = '';
 		$team = $t; // Copy. Used instead of $this for readability.
 		$players = $players_org = array();
@@ -390,7 +375,7 @@ class TeamRebuy implements ModuleInterface
 				continue;
 			}
 			if ($p->is_journeyman) {
-				$error = 'There is one or more journeymen on the roster that need to be removed first.';
+				$error = $lng->getTrn('errors/journeymen', __CLASS__);
 				continue;
 			}
 			array_push($tmp_players, $p);
@@ -493,7 +478,7 @@ class TeamRebuy implements ModuleInterface
 			else								$p->rebuy = $p->getRebuy();
 			if ($p->inj_ni > 0)
 				$p->heal_ni = "<input type='checkbox' id='heal_ni_".$p->player_id."' name='heal_ni_".$p->player_id."' value='1' />";
-			$p->rebuy_action = "<select name='rebuy_action_".$p->player_id."' id='rebuy_action_".$p->player_id."' onchange='updateTreasury();'><option value='0'>Release</option><option value='".($p->rebuy / 1000)."'>Rebuy</option></select>";
+			$p->rebuy_action = "<select name='rebuy_action_".$p->player_id."' id='rebuy_action_".$p->player_id."' onchange='updateTreasury();'><option value='0'>".$lng->getTrn('release', __CLASS__)."</option><option value='".($p->rebuy / 1000)."'>".$lng->getTrn('rebuy', __CLASS__)."</option></select>";
 		}
 
 		/******************************
@@ -520,11 +505,11 @@ class TeamRebuy implements ModuleInterface
 			'value'     => array('desc' => $lng->getTrn('common/value'), 'kilo' => true, 'suffix' => 'k', 'nosort' => true),
 			'seasons'	=> array('desc' => 'Seasons', 'nosort' => true),
 			'rebuy'		=> array('desc' => 'Rebuy', 'kilo' => true, 'suffix' => 'k', 'nosort' => true),
-			'heal_ni'	=> array('desc' => 'Heal Ni', 'nosort' => true),
+			'heal_ni'	=> array('desc' => 'Heal NI', 'nosort' => true),
 			'rebuy_action'	=> array('desc' => $lng->getTrn('common/select'), 'nosort' => true),
 		);
 		HTMLOUT::sort_table(
-			$t->name.' Roster',
+			$t->name.' '.$lng->getTrn('common/roster'),
 			urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$t->team_id,false,false),
 			$players,
 			$fieldsDetailed,
@@ -550,17 +535,17 @@ class TeamRebuy implements ModuleInterface
 		</table>
 		<p>&nbsp;</p>
 		<center>
-		<p><b>REMEMBER: this action CANNOT be undone!</b></p>
-		<input type="submit" name="COMMIT_REBUY" id="COMMIT_REBUY" value="COMMIT REBUY" onclick="if(!confirm('Are you sure you want to proceed? This can NOT be undone.')){return false;}"/>
+		<p><b><?php echo $lng->getTrn('noundo', __CLASS__); ?></b></p>
+		<input type="submit" name="COMMIT_REBUY" id="COMMIT_REBUY" value="<?php echo $lng->getTrn('commit', __CLASS__); ?>" onclick="if(!confirm('<?php echo $lng->getTrn('commit_confirm', __CLASS__); ?>')){return false;}"/>
 		</center>
 		<?php
 	}
 
 	protected static function _doRebuy($tid) {
-		global $racesNoApothecary;
+		global $lng, $racesNoApothecary;
 
 		$team = new Team($tid);
-		title($team->name . ' Team Rebuy');
+		title($team->name . ' ' . $lng->getTrn('name', __CLASS__));
 
 		$apoth = !in_array($team->f_race_id, $racesNoApothecary);
 
@@ -570,52 +555,52 @@ class TeamRebuy implements ModuleInterface
 			<tr>
 				<td style="background-color:#FFFFFF;color:#000000;padding-left:15px;padding-right:15px;">
 		<?php
-		$newsStr = '<p>Seasons End Team Rebuy</p>'; // ('. date('D M d Y') .')
-		$newsStr .= '<p>Team Roster:</p>';
+		$newsStr = '<p>'. $lng->getTrn('end_report', __CLASS__) .'</p>'; // ('. date('D M d Y') .')
+		$newsStr .= '<p>' . $lng->getTrn('team_roster', __CLASS__) . ':</p>';
 		$newsStr .= '<ul>';
 		list($players, $players_backup, $jm_error) = self::_loadPlayers($team);
 		foreach ($players as $p) {
 			$outStr = '(' . $p->nr . ') ' . $p->name . ' : ';
 			if ($p->is_retired) {
-				$outStr .= ' (Removed Retired) ';
+				$outStr .= ' (' . $lng->getTrn('removed_retired', __CLASS__) . ') ';
 				$p->removeMNG();
 			} elseif ($p->is_mng) {
-				$outStr .= ' (Removed MNG) ';
+				$outStr .= ' (' . $lng->getTrn('removed_mnd', __CLASS__) . ') ';
 				$p->removeMNG();
 			}
 			if (isset($_POST['heal_ni_'.$p->player_id])) {
 				if ($_POST['heal_ni_'.$p->player_id] == 1) {
-					$outStr .= ' (Removed NI) ';
+					$outStr .= ' (' . $lng->getTrn('removed_ni', __CLASS__) . ') ';
 					$p->removeNiggle();
 				}
 			}
 			if (isset($_POST['rebuy_action_'.$p->player_id])) {
 				if ($_POST['rebuy_action_'.$p->player_id] > 0) {
-					$outStr .= ' <span style="color:#298000">(REHIRED)</span> ';
+					$outStr .= ' <span style="color:#298000">(' . $lng->getTrn('rehired', __CLASS__) . ')</span> ';
 				} else {
-					$outStr .= ' <span style="color:#FF0000">(RELEASED)</span> ';
+					$outStr .= ' <span style="color:#FF0000">(' . $lng->getTrn('released', __CLASS__) . ')</span> ';
 					$p->sell();
 				}
 			} else {
-				$outStr .= ' <span style="color:#FF0000">(RELEASED)</span> ';
+				$outStr .= ' <span style="color:#FF0000">(' . $lng->getTrn('released', __CLASS__) . ')</span> ';
 				$p->sell();
 			}
 			$newsStr .= '<li>' . $outStr . '</li>';
 		}
 		$newsStr .= '</ul>';
-		$newsStr .= '<p>Team Goods:</p>';
+		$newsStr .= '<p>' . $lng->getTrn('team_goods', __CLASS__) . ':</p>';
 		$newsStr .= '<ul>';
 		$apo_set = 0;
 		if (isset($_POST['rebuy_apo']) && $apoth) {
-			$newsStr .= '<li>Set Apothecary = ' . ($_POST['rebuy_apo'] == 'on' ? 'YES' : 'NO') . '</li>';
+			$newsStr .= '<li>' . $lng->getTrn('common/apothecary') . ' = ' . ($_POST['rebuy_apo'] == 'on' ? 'YES' : 'NO') . '</li>';
 			$apo_set = 1;
 		} elseif ($apoth) {
-			$newsStr .= '<li>Set Apothecary = NO</li>';
+			$newsStr .= '<li>' . $lng->getTrn('common/apothecary') . ' = NO</li>';
 		}
-		$newsStr .= '<li>Set Rerolls = ' . $_POST['rebuy_rr'] . '</li>';
-		$newsStr .= '<li>Set Assistant Coaches = ' . $_POST['rebuy_ac'] . '</li>';
-		$newsStr .= '<li>Set Cheerleaders = ' . $_POST['rebuy_cl'] . '</li>';
-		$newsStr .= '<li>Set Treasury = ' . $_POST['treasury_new'] . 'k</li>';
+		$newsStr .= '<li>' . $lng->getTrn('common/reroll') . ' = ' . $_POST['rebuy_rr'] . '</li>';
+		$newsStr .= '<li>' . $lng->getTrn('common/ass_coach') . '= ' . $_POST['rebuy_ac'] . '</li>';
+		$newsStr .= '<li>' . $lng->getTrn('common/cheerleader') . ' = ' . $_POST['rebuy_cl'] . '</li>';
+		$newsStr .= '<li>' . $lng->getTrn('matches/report/treas') . ' = ' . $_POST['treasury_new'] . 'k</li>';
 		$newsStr .= '</ul>';
 		
 		$team_sql = "UPDATE teams SET apothecary = " . $apo_set . ", rerolls = " . $_POST['rebuy_rr'] . ", ass_coaches = " . $_POST['rebuy_ac'] . ", cheerleaders = " . $_POST['rebuy_cl'] . ", treasury = " . ($_POST['treasury_new'] * 1000) . " WHERE team_id = " . $tid . ";";
@@ -623,11 +608,11 @@ class TeamRebuy implements ModuleInterface
 		SQLTriggers::run(T_SQLTRIG_TEAM_DPROPS, array('id' => $team->team_id, 'obj' => $team)); # Update TV.
 		
 		echo $newsStr;
-		echo '<p>Writting team news...</p>';
+		echo '<p>' . $lng->getTrn('write_news', __CLASS__) . '</p>';
 		$team->writeNews($newsStr);
 		echo '<p>DONE!</p>';
-		echo '<p style="color:#FF0000;">REMINDER: You may need to manually remove STAT injuries to complete Seasons End!</p>';
-		echo '<p><a href="' . urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$team->team_id,false,false) . '">Go to Team Roster</a></p>';
+		echo '<p style="color:#FF0000;">' . $lng->getTrn('post_info', __CLASS__) . '</p>';
+		echo '<p><a href="' . urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$team->team_id,false,false) . '">' . $lng->getTrn('resolvelnk', __CLASS__) . '</a></p>';
 		?>
 				</td>
 			</tr>
