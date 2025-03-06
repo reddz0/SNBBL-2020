@@ -56,8 +56,8 @@ class Team_HTMLOUT extends Team
 		while ($t = mysql_fetch_object($result)) {
 			$img = new ImageSubSys(IMGTYPE_TEAMLOGO, $t->team_id);
 			$t->logo = "<img border='0px' height='20' width='20' alt='Team race picture' src='".$img->getPath($t->f_race_id)."'>";
-			$format = $t->format;
-			$t->format = $lng->getTrn('common/'.strtolower($DEA[$t->f_rname]['other']['format']));
+			#$format = $t->format;
+			#$t->format = $lng->getTrn('common/'.strtolower($DEA[$t->f_rname]['other']['format']));
 			$retired = $t->retired;
 			$t->retired = ($t->retired) ? '<b>'.$lng->getTrn('common/yes').'</b>' : $lng->getTrn('common/no');
 			$t->rdy = ($t->rdy && !$retired) ? '<font color="green">'.$lng->getTrn('common/yes').'</font>' : '<font color="red">'.$lng->getTrn('common/no').'</font>';

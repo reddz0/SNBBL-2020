@@ -200,6 +200,11 @@ switch ($_GET['type'])
 		break;
 	case 'scheduler_apa_schedule_available':
 		break;
+	/* TeamRebuy */
+	case 'teamrebuy':
+		$tid = isset($_GET['tid']) ? $_GET['tid'] : 0;
+		Module::run('TeamRebuy', array((int) $tid));
+		break;
 	default:
 		fatal("Sorry. I don't know what the type means.\n");
 }

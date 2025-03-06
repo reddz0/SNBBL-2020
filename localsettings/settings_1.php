@@ -63,6 +63,7 @@ $rules['max_ass_coaches']       	= 6;       // Default is -1.
 $rules['max_cheerleaders']      	= 12;       // Default is -1.
 $rules['max_ass_coaches_sevens'] 	= 3;       // Default is -1.
 $rules['max_cheerleaders_sevens'] 	= 6;     // Default is -1.
+$rules['max_rebuy']					= -1; // Default is -1 which means disabled.
 // Allow/disallow teams of legend: 0 = enabled. 1 = disabled.
 $rules['amazon'] = 1; 	//Amazon (teams of legend)
 $rules['chorf'] = 1; 	//Chaos Dwarf (teams of legend)

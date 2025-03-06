@@ -28,6 +28,7 @@ $settings['modules_enabled'] = array(
     'UPLOAD_BOTOCS'      => false, # Allow upload of a BOTOCS match
     'XML_BOTOCS'         => false, # BOTOCS XML export of team
 	'Adverts'         	 => false, # Shows a BB banners across the top
+	'TeamRebuy'			=> true, # Admin menu item to rebuy teams at Seasons End
 );
 
 /*****************

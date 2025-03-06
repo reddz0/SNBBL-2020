@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<translations>
+<en-GB>
+
+<name>Team Rebuy</name>
+
+<select>Select Team</select>
+<start>START!</start>
+<resolvelnk>Go to Team Roster</resolvelnk>
+<record>Season Record</record>
+<g_played>Games Played</g_played>
+<g_won>Games Won</g_won>
+<g_drawn>Games Drawn</g_drawn>
+<item>Thing</item>
+<current>Current Amount</current>
+<funds>Funds Raised</funds>
+<extra>Extra</extra>
+<remain_treas>Remaining Treasury</remain_treas>
+<team_goods>Team Goods</team_goods>
+<costper>Cost Per</costper>
+<current_v>Current Value</current_v>
+<rebuyamt>Rebuy Amount</rebuyamt>
+<cost>Cost</cost>
+<release>Release</release>
+<rebuy>Rebuy</rebuy>
+
+<commit>COMMIT REBUY</commit>
+<commit_confirm>Are you sure you want to proceed? This can NOT be undone.</commit_confirm>
+
+<end_report>Seasons End Team Rebuy</end_report>
+<team_roster>Team Roster</team_roster>
+<removed_retired>Removed Retired</removed_retired>
+<removed_mng>Removed MNG</removed_mng>
+<removed_ni>Removed NI</removed_ni>
+<rehired>REHIRED</rehired>
+<released>RELEASED</released>
+<write_news>Writting team news...</write_news>
+<post_info>REMINDER: You may need to manually remove STAT injuries to complete Seasons End!</post_info>
+
+<help><![CDATA[
+					<p>What this page WILL do:</p>
+					<ul>
+						<li>Calculate the rebuy funds.</li>
+						<li>Allow rebuy and purchase of additional team goods. Including Rerolls at initial cost.</li>
+						<li>Remove all MNG (miss next game) statuses.</li>
+						<li>Allow choice of removing NI (niggling injuries).</li>
+						<li>Allow firing or rebuying of players.</li>
+						<li>Updates team treasury to remaining funds.</li>
+					</ul>
+					<p>What this page WILL NOT do:</p>
+					<ul>
+						<li>Preform rebuys for BB Sevens (ie: not implemented).</li>
+						<li>Remove STAT injuries. This should be done via the Team Admin Tools.</li>
+						<li>Purchase new players. This should be done via the Team Management Tools using remaining funds.</li>
+					</ul>
+					<p style="color:#FF0000;">WARNING: a completed Team Rebuy CANNOT be undone!</p>
+]]></help>
+<fundcap>Rebuy Funds Capped at </fundcap>
+<noundo>REMEMBER: this action CANNOT be undone!</noundo>
+
+<errors>
+	<missing_max_rebuy>Missing rules['max_rebuy'] value in global/league settings file.</missing_max_rebuy>
+	<incorrect_max_rebuy>Incorrect value for rules['max_rebuy'] in global/league settings file.</incorrect_max_rebuy>
+	<errors>ERRORS FOUND</errors>
+	<unplayed_matches>This team has %d unplayed scheduled matches. Are you sure they are ready to ReBuy?</unplayed_matches>
+	<journeymen>There is one or more journeymen on the roster that need to be removed first.</journeymen>
+	<negtreasury>Remaining Treasury is NEGATIVE!</negtreasury>
+	<maxrr>Value entered exceeds the maximum Rerolls allowed!</maxrr>
+	<maxac>Value entered exceeds the maximum Assistant Coaches allowed!</maxac>
+	<maxcl>Value entered exceeds the maximum Cheerleaders allowed!</maxcl>
+</errors>
+
+</en-GB>
+
+</translations>

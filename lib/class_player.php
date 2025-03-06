@@ -93,7 +93,9 @@ class Player
     public $icon = "";
     public $qty = 0;
     public $choosable_skills = array('norm' => array(), 'doub' => array(), 'chr' => array());
-    
+    public $rebuy_action = "";
+	public $heal_ni = "";
+	
     // Relations
     public $f_tname = "";
     public $f_cid = 0;
@@ -148,6 +150,8 @@ class Player
         $this->setChoosableSkills();
 		$this->islowcost = false;
 		if (in_array(118,$this->def_skills)) $this->islowcost = true;
+		$this->rebuy_action = '';
+		$this->heal_ni = '';
     }
     
     public function setStats($node, $node_id, $set_avg = false) {
