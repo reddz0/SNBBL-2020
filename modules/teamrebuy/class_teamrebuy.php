@@ -1,170 +1,181 @@
 <?php
 /*
-    This file is a template for modules.
-    
-    Note: the two terms functions and methods are used loosely in this documentation. They mean the same thing.
-    
-    How to USE a module once it's written:
-    ---------------------------------
-        Firstly you will need to register it in the modules/modsheader.php file. 
-        The existing entries and comments should be enough to figure out how to do that.
-        Now, let's say that your module (as an example) prints some kind of statistics containing box. 
-        What should you then write on the respective page in order to print the box?
-        
-            if (Module::isRegistered('MyModule')) {
-                Module::run('MyModule', array());
-            }
-        
-        The second argument passed to Module::run() is the $argv array passed on to main() (see below).
+ *  Copyright (c) Chris Reddy <reddz@mts.net> 2025. All Rights Reserved.
+ *
+ *
+ *  This file is part of OBBLM.
+ *
+ *  OBBLM is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  OBBLM is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+*/
+/*
+   This module provides an "advanced" team re-draft interface so you can specify the re-drafting actions at
+   end of season without having to manually adjust teams via the Admin Tools on the team roster page.
+   
+	What this module WILL do:
+	- Calculate the rebuy funds.
+	- Allow rebuy and purchase of additional team goods. Including Rerolls at initial cost.
+	- Remove all MNG (miss next game) statuses.
+	- Allow choice of removing NI (niggling injuries).
+	- Allow firing or rebuying of players.
+	- Updates team treasury to remaining funds.
+
+	What this module WILL NOT do:
+	- Preform rebuys for BB Sevens (ie: not implemented).
+	- Remove STAT injuries. This should be done via the Team Admin Tools.
+	- Purchase new players. This should be done via the Team Management Tools using remaining funds.
+
+	Rebuy Funds can be Capped by setting $rules['max_rebuy'] in the global/local settings files.
+
+	WARNING: a completed Team Rebuy CANNOT be undone!
+   
 */
 
 class TeamRebuy implements ModuleInterface
 {
 
-/***************
- * ModuleInterface requirements. These functions MUST be defined.
- ***************/
+	public static function main($argv) # argv = argument vector (array).
+	{
+		global $rules, $lng, $coach;
+		$IS_LOCAL_OR_GLOBAL_ADMIN = (isset($coach) && ($coach->ring == Coach::T_RING_GLOBAL_ADMIN || $coach->ring == Coach::T_RING_LOCAL_ADMIN));
 
-/*
- *  Basically you are free to design your main() function as you wish. 
- *  If you are writing a simple module that merely echoes out some data, you may want to have main() doing all the work (i.e. place all your code here).
- *  If you on the other hand are writing a module which is divided into several routines, you may (and should) use the main() as a wrapper for calling the appropriate code.
- *  
- *  The below main() example illustrates how main() COULD work as a wrapper, when the subdivision of code is done into functions in this SAME class.
- */
-public static function main($argv) # argv = argument vector (array).
-{
-    global $rules, $lng, $coach;
-	$IS_LOCAL_OR_GLOBAL_ADMIN = (isset($coach) && ($coach->ring == Coach::T_RING_GLOBAL_ADMIN || $coach->ring == Coach::T_RING_LOCAL_ADMIN));
-
-	if (!$IS_LOCAL_OR_GLOBAL_ADMIN) {
-		fatal("Sorry. Your access level does not allow you opening the requested page.");
-	}
-	if (!isset($rules['max_rebuy'])) {
-		fatal("Missing rules['max_rebuy'] value in global/league settings file.");
-	}
-	elseif ($rules['max_rebuy'] == 0 || $rules['max_rebuy'] < -1) {
-		fatal("Incorrect value for rules['max_rebuy'] in global/league settings file.");
-	}
-	
-    #title($lng->getTrn('name', __CLASS__));
-	$tid = array_shift($argv);
-    if (!is_numeric($tid) || $tid == 0) {
-		title('Team Rebuy');
-		$tid = self::_teamSelect();
-	}
-	if (is_numeric($tid) && $tid > 0) {
-		self::_showteam($tid);
-	}
-	if (isset($_POST['COMMIT_REBUY']) && isset($_POST['tid'])) {
-		if ($_POST['COMMIT_REBUY'] == 'COMMIT REBUY' && is_numeric($_POST['tid'])) {
-			self::_doRebuy($_POST['tid']);
+		if (!$IS_LOCAL_OR_GLOBAL_ADMIN) {
+			fatal("Sorry. Your access level does not allow you opening the requested page.");
 		}
-	}
-    return true;
-}
-
-protected static function _teamSelect() 
-{
-    global $rules, $lng;
-
-    $_SUBMITTED = isset($_POST['team_as']) && $_POST['team_as'];
-    $team = '';
-    if ($_SUBMITTED) {
-        $team = $_POST['team_as'];
-    }
-    ?>
-    <br>
-    <center>
-	<table class="common" style="width:50%">
-		<tr>
-			<td style="background-color:#FFFFFF;color:#000000;padding-left:15px;padding-right:15px;">
-				<p>What this page WILL do:</p>
-				<ul>
-					<li>Calculate the rebuy funds.</li>
-					<li>Allow rebuy and purchase of additional team goods. Including Rerolls at initial cost.</li>
-					<li>Remove all MNG (miss next game) statuses.</li>
-					<li>Allow choice of removing NI (niggling injuries).</li>
-					<li>Allow firing or rebuying of players.</li>
-					<li>Updates team treasury to remaining funds.</li>
-				</ul>
-				<p>What this page WILL NOT do:</p>
-				<ul>
-					<li>Preform rebuys for BB Sevens (ie: not implemented).</li>
-					<li>Remove STAT injuries. This should be done via the Team Admin Tools.</li>
-					<li>Purchase new players. This should be done via the Team Management Tools using remaining funds.</li>
-				</ul>
-				<p style="color:#298000">Rebuy Funds Capped at <?php if ($rules['max_rebuy'] == -1) { echo 'UNLIMITED'; } else { echo ($rules['max_rebuy'] / 1000) . 'k'; } ?>.</p>
-				<p style="color:#FF0000;">WARNING: a completed Team Rebuy CANNOT be undone!</p>
-			</td>
-		</tr>
-	</table>
-	<br><br>
-    <form method='POST'>
-    Select Team: <input type="text" id='team_as' name="team_as" size="30" maxlength="50" value="<?php echo $team;?>">
-    <script>
-        $(document).ready(function(){
-            var options, a;
-
-            options = {
-                minChars:3,
-                    serviceUrl:'handler.php?type=autocomplete&obj=<?php echo T_OBJ_TEAM;?>',
-            };
-            a = $('#team_as').autocomplete(options);
-        });
-    </script>
-    <br><br>
-    <input type="submit" name="start_rebuy" value="START!">
-    </form>
-    </center>
-    <br>
-    <?php
-    return $_SUBMITTED ? get_alt_col('teams', 'name', $team, 'team_id') : null;
-}
-
-protected static function _showteam($tid)
-{
-	global $coach;
-	
-	$t = new Team($tid);
-
-	if (!$coach->isNodeCommish(T_NODE_LEAGUE, $t->f_lid)) {
-		fatal("Sorry. Your access level does not allow you opening the requested page.");
+		if (!isset($rules['max_rebuy'])) {
+			fatal("Missing rules['max_rebuy'] value in global/league settings file.");
+		}
+		elseif ($rules['max_rebuy'] == 0 || $rules['max_rebuy'] < -1) {
+			fatal("Incorrect value for rules['max_rebuy'] in global/league settings file.");
+		}
+		
+		$tid = array_shift($argv);
+		if (!is_numeric($tid) || $tid == 0) {
+			title('Team Rebuy');
+			$tid = self::_teamSelect();
+		}
+		if (is_numeric($tid) && $tid > 0) {
+			self::_showteam($tid);
+		}
+		if (isset($_POST['COMMIT_REBUY']) && isset($_POST['tid'])) {
+			if ($_POST['COMMIT_REBUY'] == 'COMMIT REBUY' && is_numeric($_POST['tid'])) {
+				self::_doRebuy($_POST['tid']);
+			}
+		}
+		return true;
 	}
 
-	title($t->name . ' Team Rebuy');
+	protected static function _teamSelect() 
+	{
+		global $rules, $lng;
 
-	/* Argument(s) passed to generating functions. */
-	$ALLOW_EDIT = $t->allowEdit(); # Show team action boxes?
-	$DETAILED   = true; #(isset($_GET['detailed']) && $_GET['detailed'] == 1);# Detailed roster view?
+		$_SUBMITTED = isset($_POST['team_as']) && $_POST['team_as'];
+		$team = '';
+		if ($_SUBMITTED) {
+			$team = $_POST['team_as'];
+		}
+		?>
+		<br>
+		<center>
+		<table class="common" style="width:50%">
+			<tr>
+				<td style="background-color:#FFFFFF;color:#000000;padding-left:15px;padding-right:15px;">
+					<p>What this page WILL do:</p>
+					<ul>
+						<li>Calculate the rebuy funds.</li>
+						<li>Allow rebuy and purchase of additional team goods. Including Rerolls at initial cost.</li>
+						<li>Remove all MNG (miss next game) statuses.</li>
+						<li>Allow choice of removing NI (niggling injuries).</li>
+						<li>Allow firing or rebuying of players.</li>
+						<li>Updates team treasury to remaining funds.</li>
+					</ul>
+					<p>What this page WILL NOT do:</p>
+					<ul>
+						<li>Preform rebuys for BB Sevens (ie: not implemented).</li>
+						<li>Remove STAT injuries. This should be done via the Team Admin Tools.</li>
+						<li>Purchase new players. This should be done via the Team Management Tools using remaining funds.</li>
+					</ul>
+					<p style="color:#298000">Rebuy Funds Capped at <?php if ($rules['max_rebuy'] == -1) { echo 'UNLIMITED'; } else { echo ($rules['max_rebuy'] / 1000) . 'k'; } ?>.</p>
+					<p style="color:#FF0000;">WARNING: a completed Team Rebuy CANNOT be undone!</p>
+				</td>
+			</tr>
+		</table>
+		<br><br>
+		<form method='POST'>
+		Select Team: <input type="text" id='team_as' name="team_as" size="30" maxlength="50" value="<?php echo $team;?>">
+		<script>
+			$(document).ready(function(){
+				var options, a;
 
-	/* Team pages consist of the output of these generating functions. */
-	$m_error = '';
-	list($matches, $pages) = Stats::getMatches(T_OBJ_TEAM, $t->team_id, false, false, false, false, array(), true, true);
-	if (is_array($matches) && count($matches) > 0)
-		$m_error = 'This team has ' . count($matches) . ' unplayed scheduled matches. Are you sure they are ready to ReBuy?';
-	list($players, $players_backup, $jm_error) = self::_loadPlayers($t);
-	if ($jm_error !== '' || $m_error !== '') {
-		echo '<p><strong>ERRORS FOUND</strong></p><ul>';
-		if ($jm_error !== '')
-			echo '<li>' . $jm_error . '</li>';
-		if ($m_error !== '')
-			echo '<li>' . $m_error . '</li>';
-		echo '</ul><p><a href="'.urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$t->team_id,false,false).'">Go to Team Page to resolve.</a></p>';
-		return false;
+				options = {
+					minChars:3,
+						serviceUrl:'handler.php?type=autocomplete&obj=<?php echo T_OBJ_TEAM;?>',
+				};
+				a = $('#team_as').autocomplete(options);
+			});
+		</script>
+		<br><br>
+		<input type="submit" name="start_rebuy" value="START!">
+		</form>
+		</center>
+		<br>
+		<?php
+		return $_SUBMITTED ? get_alt_col('teams', 'name', $team, 'team_id') : null;
 	}
-	
-	echo "<form method='POST' name='rebuy_form'>";
-	self::_teamgoods($ALLOW_EDIT, $t, $players);
-	self::_roster($ALLOW_EDIT, $DETAILED, $t, $players);
-	echo "</form>";
-	return true;
-}
+
+	protected static function _showteam($tid)
+	{
+		global $coach;
+		
+		$t = new Team($tid);
+
+		if (!$coach->isNodeCommish(T_NODE_LEAGUE, $t->f_lid)) {
+			fatal("Sorry. Your access level does not allow you opening the requested page.");
+		}
+
+		title($t->name . ' Team Rebuy');
+
+		/* Argument(s) passed to generating functions. */
+		$ALLOW_EDIT = $t->allowEdit(); # Show team action boxes?
+
+		/* Check for things that would prevent team from re-draft (ie: not in "end of season" readiness) */
+		$m_error = '';
+		list($matches, $pages) = Stats::getMatches(T_OBJ_TEAM, $t->team_id, false, false, false, false, array(), true, true);
+		if (is_array($matches) && count($matches) > 0)
+			$m_error = 'This team has ' . count($matches) . ' unplayed scheduled matches. Are you sure they are ready to ReBuy?';
+		list($players, $players_backup, $jm_error) = self::_loadPlayers($t);
+		if ($jm_error !== '' || $m_error !== '') {
+			echo '<p><strong>ERRORS FOUND</strong></p><ul>';
+			if ($jm_error !== '')
+				echo '<li>' . $jm_error . '</li>';
+			if ($m_error !== '')
+				echo '<li>' . $m_error . '</li>';
+			echo '</ul><p><a href="'.urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$t->team_id,false,false).'">Go to Team Page to resolve.</a></p>';
+			return false;
+		}
+		
+		echo "<form method='POST' name='rebuy_form'>";
+		self::_teamgoods($ALLOW_EDIT, $t, $players);
+		self::_roster($ALLOW_EDIT, $t, $players);
+		echo "</form>";
+		return true;
+	}
 
 	protected static function _teamgoods($ALLOW_EDIT, $t, $players) {
 		global $settings, $rules, $lng, $coach, $DEA, $racesNoApothecary;
 		setupGlobalVars(T_SETUP_GLOBAL_VARS__LOAD_LEAGUE_SETTINGS, array('lid' => $t->f_lid)); // Load correct $rules for league.
-		$team = $t; // Copy. Used instead of $this for readability.
+
 		$race = new Race($t->f_race_id);
 		$rr_price = $DEA[$race->race]['other']['rr_cost'];
 		$apoth = !in_array($race->race_id, $racesNoApothecary);
@@ -310,7 +321,7 @@ protected static function _showteam($tid)
 			<tr>
 				<td style="background-color:#FFFFFF;color:#000000;"><b>Dedicated Fans</b></td>
 				<td style="background-color:#FFFFFF;color:#000000;">-</td>
-				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->ff; ?></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->rg_ff; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;">-</td>
 				<td style="background-color:#FFFFFF;color:#000000;">-</td>
 				<td style="background-color:#FFFFFF;color:#000000;">-</td>
@@ -388,10 +399,9 @@ protected static function _showteam($tid)
 		return array($players, $players_org, $error);
 	}
 
-	protected static function _roster($ALLOW_EDIT, $DETAILED, $t, $players) {
+	protected static function _roster($ALLOW_EDIT, $t, $players) {
 		global $rules, $settings, $lng, $skillididx, $coach, $DEA;
 		setupGlobalVars(T_SETUP_GLOBAL_VARS__LOAD_LEAGUE_SETTINGS, array('lid' => $t->f_lid)); // Load correct $rules for league.
-		$team = $t; // Copy. Used instead of $this for readability.
 
 		/******************************
 		 *   Make the players ready for roster printing.
@@ -403,21 +413,21 @@ protected static function _showteam($tid)
 			$p->name = preg_replace('/\s/', '&nbsp;', $p->name);
 			$p->position = preg_replace('/\s/', '&nbsp;', $p->position);
 			$p->info = '<i class="icon-info"></i>';
-			$p->team_id = $team->team_id;
+			$p->team_id = $t->team_id;
 			/*
 				Colors
 			*/
 			// Fictive player color fields used for creating player table.
 			$p->HTMLfcolor = '#000000';
 			$p->HTMLbcolor = COLOR_HTML_NORMAL;
-			if     ($p->is_sold && $DETAILED)   $p->HTMLbcolor = COLOR_HTML_SOLD; # Sold has highest priority.
-			elseif ($p->is_dead && $DETAILED)   $p->HTMLbcolor = COLOR_HTML_DEAD;
+			if     ($p->is_sold)   $p->HTMLbcolor = COLOR_HTML_SOLD; # Sold has highest priority.
+			elseif ($p->is_dead)   $p->HTMLbcolor = COLOR_HTML_DEAD;
 			elseif ($p->is_mng)                 $p->HTMLbcolor = COLOR_HTML_MNG;
 			elseif ($p->is_retired)             $p->HTMLbcolor = COLOR_HTML_RETIRED;
 			elseif ($p->is_journeyman_used)     $p->HTMLbcolor = COLOR_HTML_JOURNEY_USED;
 			elseif ($p->is_journeyman)          $p->HTMLbcolor = COLOR_HTML_JOURNEY;
 			elseif ($p->mayHaveNewSkill())      $p->HTMLbcolor = COLOR_HTML_NEWSKILL;
-			elseif ($DETAILED)                  $p->HTMLbcolor = COLOR_HTML_READY;
+			else   $p->HTMLbcolor = COLOR_HTML_READY;
 			$p->skills   = '<small>'.$p->getSkillsStr(true).'</small>';
 			$p->injs     = $p->getInjsStr(true);
 			$p->position = "<table style='border-spacing:0px;'><tr><td><img align='left' src='$p->icon' alt='player avatar'></td><td>".$lng->getTrn("position/".strtolower($lng->FilterPosition($p->position)))."</td></tr></table>";
@@ -489,10 +499,10 @@ protected static function _showteam($tid)
 		/******************************
 		 * Team players table
 		 * ------------------
-		 * Contains player information and menu(s) for skill choice.
+		 * Contains player information and options for re-draft
 		 ******************************/
 		$allowEdit = (isset($coach) && $coach)
-			? $coach->isMyTeam($team->team_id) || $coach->mayManageObj(T_OBJ_TEAM, $team->team_id)
+			? $coach->isMyTeam($t->team_id) || $coach->mayManageObj(T_OBJ_TEAM, $t->team_id)
 			: false;
 		$fieldsDetailed = array(
 			'nr'        => array('desc' => '#', 'nosort' => true),
@@ -514,8 +524,8 @@ protected static function _showteam($tid)
 			'rebuy_action'	=> array('desc' => $lng->getTrn('common/select'), 'nosort' => true),
 		);
 		HTMLOUT::sort_table(
-			$team->name.' Roster',
-			urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$team->team_id,false,false),
+			$t->name.' Roster',
+			urlcompile(T_URL_PROFILE,T_OBJ_TEAM,$t->team_id,false,false),
 			$players,
 			$fieldsDetailed,
 			sort_rule('player'),
@@ -527,36 +537,33 @@ protected static function _showteam($tid)
 		<table class="text">
 			<tr>
 				<td style="width: 100%;"> </td>
-				<?php
-				if ($DETAILED) {
-					?>
-					<td style="background-color: <?php echo COLOR_HTML_READY;   ?>;"><font color='black'><b>&nbsp;Ready&nbsp;</b></font></td>
-					<td style="background-color: <?php echo COLOR_HTML_MNG;     ?>;"><font color='black'><b>&nbsp;MNG&nbsp;</b></font></td>
-					<td style="background-color: <?php echo COLOR_HTML_RETIRED;     ?>;"><font color='black'><b>&nbsp;Retired&nbsp;</b></font></td>
-					<td style="background-color: <?php echo COLOR_HTML_JOURNEY; ?>;"><font color='black'><b>&nbsp;Journey&nbsp;</b></font></td>
-					<td style="background-color: <?php echo COLOR_HTML_JOURNEY_USED; ?>;"><font color='black'><b>&nbsp;Used&nbsp;journey&nbsp;</b></font></td>
-					<td style="background-color: <?php echo COLOR_HTML_DEAD;    ?>;"><font color='black'><b>&nbsp;Dead&nbsp;</b></font></td>
-					<td style="background-color: <?php echo COLOR_HTML_SOLD;    ?>;"><font color='black'><b>&nbsp;Sold&nbsp;</b></font></td>
-					<td style="background-color: <?php echo COLOR_HTML_STARMERC;?>;"><font color='black'><b>&nbsp;Star/merc&nbsp;</b></font></td>
-					<td style="background-color: <?php echo COLOR_HTML_NEWSKILL;?>;"><font color='black'><b>&nbsp;New&nbsp;skill&nbsp;</b></font></td>
-					<?php
-				}
-				?>
+				<td style="background-color: <?php echo COLOR_HTML_READY;   ?>;"><font color='black'><b>&nbsp;Ready&nbsp;</b></font></td>
+				<td style="background-color: <?php echo COLOR_HTML_MNG;     ?>;"><font color='black'><b>&nbsp;MNG&nbsp;</b></font></td>
+				<td style="background-color: <?php echo COLOR_HTML_RETIRED;     ?>;"><font color='black'><b>&nbsp;Retired&nbsp;</b></font></td>
+				<td style="background-color: <?php echo COLOR_HTML_JOURNEY; ?>;"><font color='black'><b>&nbsp;Journey&nbsp;</b></font></td>
+				<td style="background-color: <?php echo COLOR_HTML_JOURNEY_USED; ?>;"><font color='black'><b>&nbsp;Used&nbsp;journey&nbsp;</b></font></td>
+				<td style="background-color: <?php echo COLOR_HTML_DEAD;    ?>;"><font color='black'><b>&nbsp;Dead&nbsp;</b></font></td>
+				<td style="background-color: <?php echo COLOR_HTML_SOLD;    ?>;"><font color='black'><b>&nbsp;Sold&nbsp;</b></font></td>
+				<td style="background-color: <?php echo COLOR_HTML_STARMERC;?>;"><font color='black'><b>&nbsp;Star/merc&nbsp;</b></font></td>
+				<td style="background-color: <?php echo COLOR_HTML_NEWSKILL;?>;"><font color='black'><b>&nbsp;New&nbsp;skill&nbsp;</b></font></td>
 			</tr>
 		</table>
 		<p>&nbsp;</p>
 		<center>
 		<p><b>REMEMBER: this action CANNOT be undone!</b></p>
-		<input type="submit" name="COMMIT_REBUY" id="COMMIT_REBUY" value="COMMIT REBUY" />
+		<input type="submit" name="COMMIT_REBUY" id="COMMIT_REBUY" value="COMMIT REBUY" onclick="if(!confirm('Are you sure you want to proceed? This can NOT be undone.')){return false;}"/>
 		</center>
 		<?php
 	}
 
 	protected static function _doRebuy($tid) {
 		global $racesNoApothecary;
+
 		$team = new Team($tid);
 		title($team->name . ' Team Rebuy');
+
 		$apoth = !in_array($team->f_race_id, $racesNoApothecary);
+
 		?>
 		<center>
 		<table class="common" style="width:50%">
@@ -629,39 +636,31 @@ protected static function _showteam($tid)
 		<?php
 	}
 
-/*
- *  This function returns information about the module and its author.
- */
-public static function getModuleAttributes()
-{
-    return array(
-        'author'     => 'Chris Reddy',
-        'moduleName' => 'Team Rebuy',
-        'date'       => '2025', # For example '2009'.
-        'setCanvas'  => true, # If true, whenever your main() is run through Module::run() your code's output will be "sandwiched" into the standard HTML frame.
-    );
-}
-
-/*
- *  This function returns the MySQL table definitions for the tables required by the module. If no tables are used array() should be returned.
- */
-	public static function getModuleTables()
+	/*
+	*  This function returns information about the module and its author.
+	*/
+	public static function getModuleAttributes()
 	{
 		return array(
+			'author'     => 'Chris Reddy',
+			'moduleName' => 'Team Rebuy',
+			'date'       => '2025',
+			'setCanvas'  => true,
 		);
+	}
+
+	public static function getModuleTables()
+	{
+		return array();
 	}
 
 	public static function getModuleUpgradeSQL()
 	{
-		return array(
-		);
+		return array();
 	}
 
-public static function triggerHandler($type, $argv){
-
-    // Do stuff on trigger events.
-    // $type may be any one of the T_TRIGGER_* types.
-}
+	public static function triggerHandler($type, $argv){
+	}
 
 }
 
