@@ -202,7 +202,7 @@ switch ($_GET['type'])
 		break;
 	/* TeamRebuy */
 	case 'teamrebuy':
-		$tid = isset($_GET['tid']) ? $_GET['tid'] : 0;
+		$tid = isset($_GET['tid']) ? $_GET['tid'] : (isset($_POST['tid']) ? $_POST['tid'] : 0);
 		Module::run('TeamRebuy', array((int) $tid));
 		break;
 	default:
