@@ -62,21 +62,84 @@ class TeamRebuy implements ModuleInterface
 		
 		$tid = array_shift($argv);
 		if (!is_numeric($tid) || $tid == 0) {
-			title($lng->getTrn('name', __CLASS__));
-			$tid = self::_teamSelect();
-		}
-		if (is_numeric($tid) && $tid > 0) {
-			self::_showteam($tid);
-		}
-		if (isset($_POST['COMMIT_REBUY']) && isset($_POST['tid'])) {
-			if ($_POST['COMMIT_REBUY'] !== '' && is_numeric($_POST['tid'])) {
-				self::_doRebuy($_POST['tid']);
+			if ($tid == 0) {
+				title($lng->getTrn('name', __CLASS__));
+				$tid = self::_teamSelect();
 			}
+		}
+		if (isset($_POST['COMMIT_REBUY'])) {
+			if ($_POST['COMMIT_REBUY'] !== '') {
+				self::_doRebuy($_POST['tid']);
+				return true;
+			}
+		} elseif (is_numeric($tid) && $tid > 0) {
+			self::_showteam($tid);
 		}
 		return true;
 	}
 
-	protected static function _teamSelect() 
+	/*
+		The two _teamSelect functions allow for different ways of selecting teams.
+		The first (default) allows selecting node first, and automatically pulls the teams match record data at the node level selected.
+		The second (with _old in the name) allows for partial match search, but match record data must be manually entered in the rebuy form.
+		To switch which is used, make sure the one you want is named _teamSelect and the other something else.
+	*/
+
+	protected static function _teamSelect() // use this function if you want to select a team from a specific node level (match record will be pulled at the node level selected)
+	{
+		global $rules, $lng;
+		
+		?>
+		<br>
+		<center>
+		<table class="common" style="width:50%">
+			<tr>
+				<td style="background-color:#FFFFFF;color:#000000;padding-left:15px;padding-right:15px;">
+					<?php echo $lng->getTrn('help', __CLASS__); ?>
+					<p style="color:#298000"><?php echo $lng->getTrn('fundcap', __CLASS__); ?> <?php if ($rules['max_rebuy'] == -1) { echo 'UNLIMITED'; } else { echo ($rules['max_rebuy'] / 1000) . 'k'; } ?>.</p>
+				</td>
+			</tr>
+		</table>
+		<br><br>
+		<?php
+
+		list($sel_node, $sel_node_id) = HTMLOUT::nodeSelector(array());
+		
+		?>
+		<br>
+		<form method="POST">
+		<script type="text/javascript">
+			function setFields($argv) {
+				document.getElementById("tid").value = $argv.split(",")[0];
+				document.getElementById("gp_pre").value = $argv.split(",")[1];
+				document.getElementById("gw_pre").value = $argv.split(",")[2];
+				document.getElementById("gd_pre").value = $argv.split(",")[3];
+			}
+		</script>
+		<?php echo $lng->getTrn('select', __CLASS__); ?> : <select name="team_sel" id="team_sel" onchange="setFields(this.value);"><option value="0,0,0,0">-- SELECT TEAM --</option>
+		<?php
+	
+		// load all the teams
+		list($teams, ) = Stats::getRaw(T_OBJ_TEAM, array($sel_node => $sel_node_id), array(), array(), false);
+		foreach ($teams as $t) {
+			echo "<option value='" . $t['team_id'] . "," . $t['mv_played'] . "," . $t['mv_won'] . "," . $t['mv_draw'] . "'>" . $t['name'] . "</option>";
+		}
+		
+		?>
+		</select>
+		<input type="hidden" name="node" value="<?php echo $sel_node; ?>" />
+		<input type="hidden" name="node_id" value="<?php echo $sel_node_id; ?>" />
+		<input type="hidden" name="tid" id="tid" value="0" />
+		<input type="hidden" name="gp_pre" id="gp_pre" value="0" />
+		<input type="hidden" name="gw_pre" id="gw_pre" value="0" />
+		<input type="hidden" name="gd_pre" id="gd_pre" value="0" />
+		<input type="submit" name="start_rebuy" value="<?php echo $lng->getTrn('start', __CLASS__); ?>">
+		</form>
+		</center>
+		<?php
+	}
+	
+	protected static function _teamSelect_old() // use this function if you want simple team search
 	{
 		global $rules, $lng;
 
@@ -151,19 +214,35 @@ class TeamRebuy implements ModuleInterface
 		}
 		
 		echo "<form method='POST' name='rebuy_form'>";
-		self::_teamgoods($ALLOW_EDIT, $t, $players);
-		self::_roster($ALLOW_EDIT, $t, $players);
+		self::_teamgoods($t, $players);
+		self::_roster($t, $players);
+		?>
+		<p>&nbsp;</p>
+		<center>
+		<p><b><?php echo $lng->getTrn('noundo', __CLASS__); ?></b></p>
+		<input type="submit" name="COMMIT_REBUY" id="COMMIT_REBUY" value="<?php echo $lng->getTrn('commit', __CLASS__); ?>" onclick="if(!confirm('<?php echo $lng->getTrn('commit_confirm', __CLASS__); ?>')){return false;}"/>
+		</center>
+		<?php
 		echo "</form>";
 		return true;
 	}
 
-	protected static function _teamgoods($ALLOW_EDIT, $t, $players) {
+	protected static function _teamgoods($t, $players) {
 		global $settings, $rules, $lng, $coach, $DEA, $racesNoApothecary;
 		setupGlobalVars(T_SETUP_GLOBAL_VARS__LOAD_LEAGUE_SETTINGS, array('lid' => $t->f_lid)); // Load correct $rules for league.
 
 		$race = new Race($t->f_race_id);
 		$rr_price = $DEA[$race->race]['other']['rr_cost'];
 		$apoth = !in_array($race->race_id, $racesNoApothecary);
+		
+		$funds_init = 0;
+		if (isset($_POST['gp_pre']) && isset($_POST['gw_pre']) && isset($_POST['gd_pre'])) {
+			$funds_init = ($t->treasury / 1000) + 1000;
+			$funds_init += ((int) $_POST['gp_pre']) * 20;
+			$funds_init += ((int) $_POST['gw_pre']) * 20;
+			$funds_init += ((int) $_POST['gd_pre']) * 10;
+			if ($rules['max_rebuy'] !== -1) $funds_init = min($funds_init, $rules['max_rebuy'] / 1000);
+		}
 
 		?>
 		<script type="text/javascript">
@@ -247,7 +326,6 @@ class TeamRebuy implements ModuleInterface
 				updateTreasury();
 			}
 		</script>
-
 		<input type="hidden" name="tid" id="tid" value="<?php echo $t->team_id; ?>" />
 		<table class="common" style="width:50%">
 			<tr class="commonhead">
@@ -261,9 +339,9 @@ class TeamRebuy implements ModuleInterface
 				<td><i><?php echo $lng->getTrn('g_drawn', __CLASS__); ?></i></td>
 			</tr>
 			<tr>
-				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gp" value="0" id="num_gp" /></td>
-				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gw" value="0" id="num_gw" /></td>
-				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gd" value="0" id="num_gd" /></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gp" value="<?php echo isset($_POST['gp_pre']) ? $_POST['gp_pre'] : 0; ?>" id="num_gp" /></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gw" value="<?php echo isset($_POST['gw_pre']) ? $_POST['gw_pre'] : 0; ?>" id="num_gw" /></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" onchange="numError(this,false);updateRaisedFunds();" size="1" maxlength="2" name="num_gd" value="<?php echo isset($_POST['gd_pre']) ? $_POST['gd_pre'] : 0; ?>" id="num_gd" /></td>
 			</tr>
 		</table>
 		<p>&nbsp;</p>
@@ -283,9 +361,9 @@ class TeamRebuy implements ModuleInterface
 			<tr>
 				<td style="background-color:#FFFFFF;color:#000000;"><b><?php echo $lng->getTrn('matches/report/treas'); ?></b></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->treasury / 1000; ?>k</td>
-				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="rebuy_funds" id="rebuy_funds" /><span id="rebuy_funds_viz">0</span>k</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="rebuy_funds" id="rebuy_funds" value="<?php echo $funds_init; ?>" /><span id="rebuy_funds_viz"><?php echo $funds_init; ?></span>k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" onchange="numError(this,true);updateTreasury();" size="5" maxlength="10" value="0" name="rebuy_delta" id="rebuy_delta" />k</td>
-				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="treasury_new" id="treasury_new" /><span id="treasury_new_viz">0</span>k</td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="treasury_new" id="treasury_new" value="<?php echo $funds_init; ?>" /><span id="treasury_new_viz"><?php echo $funds_init; ?></span>k</td>
 			</tr>
 		</table>
 		<p>&nbsp;</p>
@@ -384,7 +462,7 @@ class TeamRebuy implements ModuleInterface
 		return array($players, $players_org, $error);
 	}
 
-	protected static function _roster($ALLOW_EDIT, $t, $players) {
+	protected static function _roster($t, $players) {
 		global $rules, $settings, $lng, $skillididx, $coach, $DEA;
 		setupGlobalVars(T_SETUP_GLOBAL_VARS__LOAD_LEAGUE_SETTINGS, array('lid' => $t->f_lid)); // Load correct $rules for league.
 
@@ -518,7 +596,6 @@ class TeamRebuy implements ModuleInterface
 			array('color' => false, 'doNr' => false, 'noHelp' => true)
 		);
 		?>
-		<!-- Following HTML is from class_team_htmlout.php _roster -->
 		<table class="text">
 			<tr>
 				<td style="width: 100%;"> </td>
@@ -533,11 +610,6 @@ class TeamRebuy implements ModuleInterface
 				<td style="background-color: <?php echo COLOR_HTML_NEWSKILL;?>;"><font color='black'><b>&nbsp;New&nbsp;skill&nbsp;</b></font></td>
 			</tr>
 		</table>
-		<p>&nbsp;</p>
-		<center>
-		<p><b><?php echo $lng->getTrn('noundo', __CLASS__); ?></b></p>
-		<input type="submit" name="COMMIT_REBUY" id="COMMIT_REBUY" value="<?php echo $lng->getTrn('commit', __CLASS__); ?>" onclick="if(!confirm('<?php echo $lng->getTrn('commit_confirm', __CLASS__); ?>')){return false;}"/>
-		</center>
 		<?php
 	}
 
