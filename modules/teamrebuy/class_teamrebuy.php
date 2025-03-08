@@ -25,7 +25,7 @@
    
 	What this module WILL do:
 	- Calculate the rebuy funds.
-	- Allow rebuy and purchase of additional team goods. Including Rerolls at initial cost.
+	- Allow rebuy of team goods, including Rerolls at initial cost.
 	- Remove all MNG (miss next game) statuses.
 	- Allow choice of removing NI (niggling injuries).
 	- Allow firing or rebuying of players.
@@ -391,13 +391,15 @@ class TeamRebuy implements ModuleInterface
 			</tr>
 		<?php
 		if ($apoth) {
+			$disabled = "disabled=\"disabled\"";
+			if ($t->apothecary == 1) $disabled = "";
 		?>
 			<tr>
 				<td style="background-color:#FFFFFF;color:#000000;"><b><?php echo $lng->getTrn('common/apothecary'); ?></b></td>
 				<td style="background-color:#FFFFFF;color:#000000;">50k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->apothecary; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->apothecary * 50; ?>k</td>
-				<td style="background-color:#FFFFFF;color:#000000;"><input type="checkbox" name="rebuy_apo" id="rebuy_apo" onchange="rebuyApo();" /></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="checkbox" name="rebuy_apo" id="rebuy_apo" onchange="rebuyApo();" <?php echo $disabled; ?> /></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="apo_price" id="apo_price" /><span id="apo_price_viz">0</span>k</td>
 			</tr>
 		<?php
@@ -408,7 +410,7 @@ class TeamRebuy implements ModuleInterface
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $rr_price / 1000; ?>k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->rerolls; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->rerolls * $rr_price / 1000; ?>k</td>
-				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="2" maxlength="2" onchange="numError(this);rebuyRR();" value="0" name="rebuy_rr" id="rebuy_rr" /></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="number" size="2" maxlength="2" onchange="numError(this);rebuyRR();" value="0" min="0" max="<?php echo $t->rerolls; ?>" name="rebuy_rr" id="rebuy_rr" /></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="rr_price" id="rr_price" /><span id="rr_price_viz">0</span>k</td>
 			</tr>
 			<tr>
@@ -416,7 +418,7 @@ class TeamRebuy implements ModuleInterface
 				<td style="background-color:#FFFFFF;color:#000000;">10k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->ass_coaches; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->ass_coaches * 10; ?>k</td>
-				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="2" maxlength="2" onchange="numError(this);rebuyAC();" value="0" name="rebuy_ac" id="rebuy_ac" /></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="number" size="2" maxlength="2" onchange="numError(this);rebuyAC();" value="0" min="0" max="<?php echo $t->ass_coaches; ?>" name="rebuy_ac" id="rebuy_ac" /></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="ac_price" id="ac_price" /><span id="ac_price_viz">0</span>k</td>
 			</tr>
 			<tr>
@@ -424,7 +426,7 @@ class TeamRebuy implements ModuleInterface
 				<td style="background-color:#FFFFFF;color:#000000;">10k</td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->cheerleaders; ?></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><?php echo $t->cheerleaders * 10; ?>k</td>
-				<td style="background-color:#FFFFFF;color:#000000;"><input type="text" size="2" maxlength="2" onchange="numError(this);rebuyCL();" value="0" name="rebuy_cl" id="rebuy_cl" /></td>
+				<td style="background-color:#FFFFFF;color:#000000;"><input type="number" size="2" maxlength="2" onchange="numError(this);rebuyCL();" value="0" min="0" max="<?php echo $t->cheerleaders; ?>" name="rebuy_cl" id="rebuy_cl" /></td>
 				<td style="background-color:#FFFFFF;color:#000000;"><input type="hidden" name="cl_price" id="cl_price" /><span id="cl_price_viz">0</span>k</td>
 			</tr>
 		</table>
