@@ -81,8 +81,6 @@ define('T_NODE_TOURNAMENT', 12);
 define('T_NODE_DIVISION',   13);
 define('T_NODE_LEAGUE',     14);
 
-define('T_OBJ_FORMAT',   20);
-
 /*********************
  *   Images
  *********************/
