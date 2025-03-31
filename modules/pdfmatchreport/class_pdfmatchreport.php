@@ -341,6 +341,10 @@ class PDFMatchReport implements ModuleInterface
                        $name = "$p->name [J]";
                        $bgc = COLOR_ROSTER_JOURNEY_USED;
                   }
+                  if ($p->mayHaveNewSkill()) {
+                       $name = "$p->name";
+                       $bgc = COLOR_ROSTER_NEWSKILL;
+                  }
                   if ($p->is_mng) {
                        $name = "$p->name [MNG]";
                        $bgc = COLOR_ROSTER_MNG;
@@ -348,10 +352,6 @@ class PDFMatchReport implements ModuleInterface
                   if ($p->is_retired) {
                        $name = "$p->name [RET]";
                        $bgc = COLOR_ROSTER_RETIRED;
-                  }
-                  if ($p->mayHaveNewSkill()) {
-                       $name = "$p->name";
-                       $bgc = COLOR_ROSTER_NEWSKILL;
                   }
 
 
