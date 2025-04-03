@@ -345,6 +345,10 @@ class SQLCore
 			BEGIN
 				DECLARE status '.$core_tables['players']['status'].' DEFAULT NULL;
 				
+				IF EXISTS(SELECT date_played FROM matches, match_data WHERE f_match_id = match_id AND f_player_id = pid AND inj = '.DEAD.') THEN
+					RETURN '.DEAD.';
+				END IF;
+				
 				IF EXISTS(SELECT player_id FROM players WHERE player_id = pid AND date_retired is not null) THEN
 					RETURN '.RETIRED.';
 				ELSE 
