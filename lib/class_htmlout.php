@@ -908,6 +908,7 @@ class HTMLOUT
 		<head>
 			<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
 			<title><?php echo $settings['site_name']; ?></title>
+			<link rel="icon" type="image/x-icon" href="favicon.ico">
 			<link type="text/css" href="css/stylesheet_default.css" rel="stylesheet">
 			<link type="text/css" href="css/stylesheet<?php echo $settings['stylesheet']; ?>.css" rel="stylesheet">
 			<link type="text/css" href="css/league_override_<?php echo self::getSelectedNodeLidOrDefault(); ?>.css" rel="stylesheet">
@@ -1066,6 +1067,8 @@ class HTMLOUT
 							echo '</ul></li>';
 						}
 					}
+					if (Module::isRegistered('TeamRebuy'))
+						echo '<li><a href="handler.php?type=teamrebuy">' . 'Team Rebuy' . '</a></li>';
 				?>
 			</ul>
 		</li><?php
@@ -1341,13 +1344,19 @@ class HTMLOUT
 							continue;
 						}
 						$cpy = $o->$f; // Don't change the objects themselves! Make copies!
-						if (array_key_exists('kilo', $a) && $a['kilo'])
-							$cpy /= 1000;
-							$cpy = (string) $cpy;
+						if (array_key_exists('kilo', $a) && $a['kilo']) {
+							if (is_numeric($cpy)) {
+								$cpy /= 1000;
+							}
+						}
+						$cpy = (string) $cpy;
 						if (is_numeric($cpy) && !ctype_digit(($cpy[0] == '-') ? substr($cpy,1) : $cpy))
 							$cpy = sprintf("%1.2f", $cpy);
-						if (array_key_exists('suffix', $a) && $a['suffix'])
-							$cpy .= $a['suffix'];
+						if (array_key_exists('suffix', $a) && $a['suffix']) {
+							if ($cpy != 'n/a') {
+								$cpy .= $a['suffix'];
+							}
+						}
 						if (array_key_exists('color', $a) && $a['color'])
 							$cpy = "<font color='$a[color]'>".$cpy."</font>";
 						if (array_key_exists('href', $a) && $a['href']) {

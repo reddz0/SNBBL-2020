@@ -6,15 +6,15 @@
 preg_match('/settings_(.*?)\.php/', __FILE__, $match);
 $get_lid = $match[1];
 $settings['stylesheet'] = 1; 
-$settings['lang']            = 'en-GB';
+$settings['lang'] = 'en-GB';
 
 /*********************
  *   General
  *********************/
 // Change the Title after the = sign.  Do not change things before the = sign.
-$settings['banner_subtitle'] = 'New here?  Visit theNAF.net/Leagues for more information';
+$settings['banner_subtitle'] = '';
 // Button text for league URL.
-$settings['league_url_name'] = 'League Forum'; 
+$settings['league_url_name'] = ''; 
 // Stylesheet for text etc. Currently stylesheet 1 is the only existing stylesheet, so don't change it!  
 // Default language. Existing: en-GB, es-ES, de-DE, fr-FR, it-IT. 
 // Default is true. Generate coach, team and player links on the front page?       
@@ -27,8 +27,11 @@ $settings['league_url']      = get_alt_col('league_prefs','f_lid',$get_lid,'foru
 $settings['welcome']         = get_alt_col('league_prefs','f_lid',$get_lid,'welcome'); 
 // The next text appears when you click the rules button.
 $settings['rules']           = get_alt_col('league_prefs','f_lid',$get_lid,'rules'); 
-$get_prime = get_alt_col('league_prefs','f_lid',$get_lid,'prime_tid');
-$get_second = get_alt_col('league_prefs','f_lid',$get_lid,'second_tid');
+$get_prime_league = 1;
+$get_prime_division = 2;
+$get_prime_tournament = 6;
+$get_prime = 2; //get_alt_col('league_prefs','f_lid',$get_lid,'prime_tid');
+$get_second = 2; //get_alt_col('league_prefs','f_lid',$get_lid,'second_tid');
 // Keep the following the same.
 $settings['tourlist_foldup_fin_divs'] = false; // Default is false. If true the division nodes in the tournament lists section will automatically be folded up if all child tournaments in that division are marked as finished.
 $settings['tourlist_hide_nodes'] = array('league', 'division', 'tournament'); // Default is array('league', 'division', 'tournament'). In the section tournament lists these nodes will be hidden if their contents (children) are finished. Example: If 'division' is chosen here, and all tours in a given division are finished, then the division entry will be hidden.
@@ -37,20 +40,20 @@ $settings['tourlist_hide_nodes'] = array('league', 'division', 'tournament'); //
  *   Rules
  *********************/
 // Please use the boolean values "true" and "false" wherever default values are boolean.
-$rules['max_team_players']      	= 16;       // Default is 16.
+$rules['max_team_players']      = 16;       // Default is 16.
 $rules['max_team_players_sevens'] 	= 11;       // Default is 16.
-$rules['static_rerolls_prices']		= false;    // Default is "false". "true" forces re-roll prices to their un-doubled values.
-$rules['player_refund']         	= 0;        // Player sell value percentage. Default is 0 = 0%, 0.5 = 50%, and so on.
-$rules['journeymen_limit']      	= 11;       // Until a team can field this number of players, it may fill team positions with journeymen.
+$rules['static_rerolls_prices'] = false;    // Default is "false". "true" forces re-roll prices to their un-doubled values.
+$rules['player_refund']         = 0;        // Player sell value percentage. Default is 0 = 0%, 0.5 = 50%, and so on.
+$rules['journeymen_limit']      = 11;       // Until a team can field this number of players, it may fill team positions with journeymen.
 $rules['journeymen_limit_sevens'] 	= 7;      // Until a team can field this number of players, it may fill team positions with journeymen.
 $rules['post_game_ff']          	= false;    // Default is false. Allows teams to buy and drop fan factor even though their first game has been played. 
 $rules['post_game_rr']          	= false;    // Default is false. Allows teams to drop rerolls even though their first game has been played.
-$rules['initial_treasury'] 			= 1000000;  // Default is 1000000.
-$rules['initial_treasury_sevens'] 	= 600000;  // Default is 600000.
-$rules['initial_rerolls']       	= 0;        // Default is 0.
-$rules['initial_fan_factor']    	= 1;        // Default is 0.
-$rules['initial_ass_coaches']   	= 0;        // Default is 0.
-$rules['initial_cheerleaders']  	= 0;        // Default is 0.
+$rules['initial_treasury'] = 1000000;  // Default is 1000000.
+$rules['initial_treasury_sevens'] = 600000;  // Default is 600000.
+$rules['initial_rerolls']       = 0;        // Default is 0.
+$rules['initial_fan_factor']    = 1;        // Default is 0.
+$rules['initial_ass_coaches']   = 0;        // Default is 0.
+$rules['initial_cheerleaders']  = 0;        // Default is 0.
 // For the below limits, the following applies: -1 = unlimited. 0 = disabled.
 $rules['max_rerolls']           	= 8;       // Default is -1.
 $rules['max_rerolls_sevens']    	= 6;       // Default is -1.
@@ -60,30 +63,30 @@ $rules['max_ass_coaches']       	= 6;       // Default is -1.
 $rules['max_cheerleaders']      	= 12;       // Default is -1.
 $rules['max_ass_coaches_sevens'] 	= 3;       // Default is -1.
 $rules['max_cheerleaders_sevens'] 	= 6;     // Default is -1.
-$rules['max_rebuy']					= 1300000; // Default is -1 which means disabled.
+$rules['max_rebuy']					= -1; // Default is -1 which means disabled.
 // Allow/disallow teams of legend: 0 = enabled. 1 = disabled.
-$rules['amazon'] 					= 1; 	//Amazon (teams of legend)
-$rules['chorf'] 					= 1; 	//Chaos Dwarf (teams of legend)
-$rules['helf'] 						= 0; 	//High Elf (teams of legend)
-$rules['vamps'] 					= 1; 	//Vampires (teams of legend)
-$rules['khemri'] 					= 0; 	//Tomb Kings (teams of legend)
-$rules['slann'] 					= 0; 	//Slann (teams of legend)
+$rules['amazon'] = 1; 	//Amazon (teams of legend)
+$rules['chorf'] = 1; 	//Chaos Dwarf (teams of legend)
+$rules['helf'] = 0; 	//High Elf (teams of legend)
+$rules['vamps'] = 1; 	//Vampires (teams of legend)
+$rules['khemri'] = 0; 	//Tomb Kings (teams of legend)
+$rules['slann'] = 1; 	//Slann (teams of legend)
 // Allow/disallow dungeon bowl teams: 0 = enabled. 1 = disabled.
-$rules['dungeon'] 					= 1; 	//Dungeon Bowl Teams
+$rules['dungeon'] = 1; 	//Dungeon Bowl Teams
 // Allow/disallow sevens teams: 0 = enabled. 1 = disabled.
-$rules['sevens'] 					= 1; 	//Sevens Teams
+$rules['sevens'] = 1; 	//Sevens Teams
 // Toggle Automated Random Skill Rolls: 0 = enabled. 1 = disabled.
-$rules['randomskillrolls'] 			= 1; 	//Automated Random Skill Rolls
+$rules['randomskillrolls'] = 1; 	//Automated Random Skill Rolls
 // Toggle Manual Entry of Random Skill Rolls: 0 = enabled. 1 = disabled.
-$rules['randomskillmanualentry'] 	= 0; 	//Manual Random Skill Rolls
-// Allow/disallow Mega-Stars in general: 0 = enabled. 1 = disabled.
-$rules['megastars'] 				= 0; 	//Mega-Stars
+$rules['randomskillmanualentry'] = 0; 	//Manual Random Skill Rolls
+// Allow/disallow Mega-Stars: 0 = enabled. 1 = disabled.
+$rules['megastars'] = 0; 	//Mega-Stars
 // Additional League Points.
-$rules['major_win_tds'] 			= 0; 	//Major Win for scoring how many TDs
-$rules['major_win_pts'] 			= 0; 	//Bonus points for a Major Win
-$rules['clean_sheet_pts'] 			= 0; 	//Bonus points for conceding 0 TDs (clean sheet)
-$rules['major_beat_cas'] 			= 0; 	//Major Beating for scoring how many Casualties
-$rules['major_beat_pts'] 			= 0; 	//Bonus points for a Major Beating
+$rules['major_win_tds'] = 3; 	//Major Win for scoring how many TDs
+$rules['major_win_pts'] = 1; 	//Bonus points for a Major Win
+$rules['clean_sheet_pts'] = 1; 	//Bonus points for conceding 0 TDs (clean sheet)
+$rules['major_beat_cas'] = 3; 	//Major Beating for scoring how many Casualties
+$rules['major_beat_pts'] = 1; 	//Bonus points for a Major Beating
 // Remove double backslashes in front of team number to enable team specific starting treasuries.
 $rules['initial_team_treasury'] = array(	//	0			=>	1000000,	// Amazon (teams of legend)
 											//	1			=>	1000000,	// Chaos Chosen
@@ -164,12 +167,12 @@ $settings['fp_standings'] = array(
 	 */
 	# This will display a standings box of the top 6 teams in the Prime Tournament
 	array(
-		'id'		=> 	$get_prime,
+		'id'		=> 	$get_prime_division,
 		'box_ID' 	=> 	1,
-		'type' 		=> 	'tournament',
+		'type' 		=> 	'division',
 		'infocus' 	=> 	true,
-		'HRS' 		=> 	get_alt_col('tours','tour_id',$get_prime,'rs'), 
-		'title' 	=> 	get_alt_col('tours','tour_id',$get_prime,'name'),
+		'HRS' 		=> 	get_alt_col('tours','tour_id',$get_prime_tournament,'rs'), 
+		'title' 	=> 	'2024-25 Season Standings', //get_alt_col('divisions','did',$get_prime_division,'name'),
 		'length' 	=> 	40, 
 		'fields' 	=> 	array(	'Name'	=> 'name',
 								'PTS'  	=> 'pts',
@@ -183,35 +186,35 @@ $settings['fp_standings'] = array(
 						),
 	), 
 	# This will display a standings box of the top 6 teams in the Secondary Tournament
-    array(
-		'id'		=> 	$get_second,
-		'box_ID' 	=> 	9,
-		'type' 		=> 	'tournament',
-		'infocus' 	=> 	false,
-		'HRS' 		=> 	get_alt_col('tours','tour_id',$get_second,'rs'), 
-		'title' 	=> 	get_alt_col('tours','tour_id',$get_second,'name'),
-		'length' 	=> 	40, 
-		'fields' 	=> 	array(	'Name'	=> 'name',
-								'PTS'  	=> 'pts',
-								'TV'	=> 'tv',
-								'CAS'	=> 'cas',
-								'W'		=> 'won',
-								'L'		=> 'lost',
-								'D'		=> 'draw',
-								'GF'	=> 'gf',
-								'GA'	=> 'ga',
-						),
-    ),
+    #array(
+	#	'id'		=> 	$get_second,
+	#	'box_ID' 	=> 	9,
+	#	'type' 		=> 	'tournament',
+	#	'infocus' 	=> 	false,
+	#	'HRS' 		=> 	get_alt_col('tours','tour_id',$get_second,'rs'), 
+	#	'title' 	=> 	get_alt_col('tours','tour_id',$get_second,'name'),
+	#	'length' 	=> 	40, 
+	#	'fields' 	=> 	array(	'Name'	=> 'name',
+	#							'PTS'  	=> 'pts',
+	#							'TV'	=> 'tv',
+	#							'CAS'	=> 'cas',
+	#							'W'		=> 'won',
+	#							'L'		=> 'lost',
+	#							'D'		=> 'draw',
+	#							'GF'	=> 'gf',
+	#							'GA'	=> 'ga',
+	#					),
+    #),
 	# This will display a standings box of the top WINNING STREAKS with ID = 4
-    array(	'id'     	=> $get_prime,
-			'box_ID' 	=> 4,
-			'type'   	=> 'tournament', 
-			'infocus' 	=> 	false,
-			'HRS' 		=> 	get_alt_col('tours','tour_id',$get_prime,'rs'),
-			'title'  	=> 'Top 3 - Longest Winning Streaks', 
-			'length' 	=> 3, 	
-			'fields' 	=> array('Team' => 'name', 'Won' => 'swon',),
-    ),
+    #array(	'id'     	=> $get_prime,
+	#		'box_ID' 	=> 4,
+	#		'type'   	=> 'tournament', 
+	#		'infocus' 	=> 	false,
+	#		'HRS' 		=> 	get_alt_col('tours','tour_id',$get_prime,'rs'),
+	#		'title'  	=> 'Top 3 - Longest Winning Streaks', 
+	#		'length' 	=> 3, 	
+	#		'fields' 	=> array('Team' => 'name', 'Won' => 'swon',),
+    #),
 );
 
 /*********************
@@ -229,8 +232,8 @@ $settings['fp_leaders'] = array(
 	 * SHOW_TEAM if set to true, will include the Team name in the table
 	 */
     # This will display a 'Most CAS' player leaders box for the Divison of the Prime Tournament
-    array(	'id'        => get_alt_col('tours','tour_id',$get_prime,'f_did'), # Node ID
-			'box_ID'    => 6,
+    array(	'id'        => $get_prime_division, //get_alt_col('tours','tour_id',$get_prime_division,'f_did'), # Node ID
+			'box_ID'    => 5,
 			'type'      => 'division',
 			'title'     => 'Top 5 Players - Casualties',
 			'field'     => 'cas',
@@ -238,11 +241,20 @@ $settings['fp_leaders'] = array(
 			'show_team' => true,
     ),
     # This will display a 'Most TD' player leaders box for the Division of the Prime Tournament
-    array(	'id'        => get_alt_col('tours','tour_id',$get_prime,'f_did'),
-			'box_ID'    => 5,
+    array(	'id'        => $get_prime_division, //get_alt_col('tours','tour_id',$get_prime_division,'f_did'),
+			'box_ID'    => 4,
 			'type'      => 'division',
 			'title'     => 'Top 5 Players - Touchdowns',
 			'field'     => 'td',
+			'length'    => 5,
+			'show_team' => true,
+    ),
+    # This will display a 'Most TD' player leaders box for the Division of the Prime Tournament
+    array(	'id'        => $get_prime_division, //get_alt_col('tours','tour_id',$get_prime_division,'f_did'),
+			'box_ID'    => 6,
+			'type'      => 'division',
+			'title'     => 'Top 5 Players - Completions',
+			'field'     => 'cp',
 			'length'    => 5,
 			'show_team' => true,
     ),
@@ -293,7 +305,7 @@ $settings['fp_latestgames'] = array(
 	 */
     # This will display a latest games box for the Prime Tournament
     array(
-        'id'     => $get_lid,
+        'id'     => $get_prime_league,
         'box_ID' => 2,
         'type'   => 'league',
         'title'  => 'Recent Games',

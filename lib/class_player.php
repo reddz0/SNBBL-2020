@@ -93,7 +93,9 @@ class Player
     public $icon = "";
     public $qty = 0;
     public $choosable_skills = array('norm' => array(), 'doub' => array(), 'chr' => array());
-    
+    public $rebuy_action = "";
+	public $heal_ni = "";
+	
     // Relations
     public $f_tname = "";
     public $f_cid = 0;
@@ -146,6 +148,10 @@ class Player
         $this->current_skills = $this->getSkillsStr(true);
         $this->may_buy_new_skill = $this->mayHaveNewSkill();
         $this->setChoosableSkills();
+		$this->islowcost = false;
+		if (in_array(118,$this->def_skills)) $this->islowcost = true;
+		$this->rebuy_action = '';
+		$this->heal_ni = '';
     }
     
     public function setStats($node, $node_id, $set_avg = false) {
@@ -336,7 +342,7 @@ class Player
          * Regret selling player (un-sell).
          */
         global $rules;
-        $lid = get_alt_col('teams', 'team_id?', $this->owned_by_team_id, 'f_lid');
+        $lid = get_alt_col('teams', 'team_id', $this->owned_by_team_id, 'f_lid');
         setupGlobalVars(T_SETUP_GLOBAL_VARS__LOAD_LEAGUE_SETTINGS, array('lid' => (int) $lid)); // Load correct $rules for league.
         if (!$this->is_sold || $this->is_dead)
             return false;
@@ -420,7 +426,7 @@ class Player
     public function addNiggle() {
         if ($this->is_journeyman || $this->is_sold || $this->is_dead)
             return false;
-        $query = "UPDATE players SET inj_ni = inj_ni +1, ni_mod = ni_mod +1 WHERE player_id = $this->player_id";
+        $query = "UPDATE players SET inj_ni = inj_ni + 1, ni_mod = ni_mod + 1 WHERE player_id = $this->player_id";
         return mysql_query($query);
     }
     
@@ -733,6 +739,26 @@ class Player
         return array($injhist, $stats, $match_objs);
     }
     
+    public function getSeasons() {
+		/**
+		 * Get number of seasons player played in
+		**/
+		$seasons_result = mysql_query("SELECT COUNT(DISTINCT f_did) as SeasonsPlayed FROM snbbl2023.match_data WHERE f_player_id = $this->player_id");
+		$row = mysql_fetch_row($seasons_result);
+		return (int) $row[0];
+	}
+
+	public function getRebuy() {
+		/**
+		 * Get rebuy cost for the player
+		**/
+		$tmpRebuy = $this->value + ($this->getSeasons() * 20000);
+		if ($this->islowcost) {
+			$tmpRebuy = $tmpRebuy + 15000;
+		}
+		return (int) $tmpRebuy;
+	}
+
     /***************
      * Statics
      ***************/
@@ -749,7 +775,7 @@ class Player
         $query = "SELECT getPlayerStatus($player_id,$match_id) AS 'inj'";
         // Determine what status is.
         $result = mysql_query($query);
-        if (is_resource($result) && mysql_num_rows($result) > 0) {
+        if (mysql_num_rows($result) > 0) {
             $row = mysql_fetch_assoc($result);
             switch ($row['inj']) {
                 case NONE: return NONE;
