@@ -639,7 +639,7 @@ class TeamRebuy implements ModuleInterface
 				$outStr .= ' (' . $lng->getTrn('removed_retired', __CLASS__) . ') ';
 				$p->removeMNG();
 			} elseif ($p->is_mng) {
-				$outStr .= ' (' . $lng->getTrn('removed_mnd', __CLASS__) . ') ';
+				$outStr .= ' (' . $lng->getTrn('removed_mng', __CLASS__) . ') ';
 				$p->removeMNG();
 			}
 			if (isset($_POST['heal_ni_'.$p->player_id])) {
